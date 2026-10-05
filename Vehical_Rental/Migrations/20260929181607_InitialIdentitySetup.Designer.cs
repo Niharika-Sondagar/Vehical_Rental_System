@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Vehical_Rental.Data;
 
@@ -11,9 +12,11 @@ using Vehical_Rental.Data;
 namespace Vehical_Rental.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260929181607_InitialIdentitySetup")]
+    partial class InitialIdentitySetup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -387,16 +390,10 @@ namespace Vehical_Rental.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
-                    b.Property<double>("Latitude")
-                        .HasColumnType("float");
-
                     b.Property<string>("LicensePlate")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
-
-                    b.Property<double>("Longitude")
-                        .HasColumnType("float");
 
                     b.Property<string>("Make")
                         .IsRequired()
@@ -407,9 +404,6 @@ namespace Vehical_Rental.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("Seats")
                         .HasColumnType("int");
@@ -426,8 +420,6 @@ namespace Vehical_Rental.Migrations
 
                     b.HasIndex("LicensePlate")
                         .IsUnique();
-
-                    b.HasIndex("OwnerId");
 
                     b.ToTable("Vehicles");
                 });
@@ -532,21 +524,9 @@ namespace Vehical_Rental.Migrations
                     b.Navigation("Vehicle");
                 });
 
-            modelBuilder.Entity("Vehical_Rental.Models.Vehicle", b =>
-                {
-                    b.HasOne("Vehical_Rental.Models.ApplicationUser", "Owner")
-                        .WithMany("OwnedVehicles")
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Owner");
-                });
-
             modelBuilder.Entity("Vehical_Rental.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Bookings");
-
-                    b.Navigation("OwnedVehicles");
 
                     b.Navigation("Reviews");
                 });

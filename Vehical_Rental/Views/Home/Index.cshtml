@@ -1,8 +1,295 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
+@inject Vehical_Rental.Services.Interfaces.IReviewService ReviewService
+@{
+    ViewData["Title"] = "Find & Rent Your Perfect Vehicle";
+    var featuredVehicles = (await VehicleService.GetAllAsync()).Take(6).ToList();
+    var recentReviews = (await ReviewService.GetAllAsync()).Take(3).ToList();
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="row align-items-center">
+        <div class="col-lg-7">
+            <span class="badge bg-primary px-3 py-2 rounded-pill mb-3 fw-semibold">
+                <i class="bi bi-stars me-1"></i> Premium Vehicle Rental Service
+            </span>
+            <h1 class="display-4 fw-bold mb-3 text-white">Find Your Perfect Drive For Any Journey</h1>
+            <p class="lead text-light mb-4 opacity-90">
+                Experience unparalleled freedom with our extensive fleet of sedans, rugged SUVs, luxury vehicles, and eco-friendly electric cars. Flexible rates, transparent pricing, and 24/7 customer care.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+                <a asp-controller="Vehicle" asp-action="Index" class="btn btn-light btn-lg px-4 fw-semibold text-primary shadow-sm">
+                    <i class="bi bi-grid me-2"></i> Browse Fleet
+                </a>
+                <a asp-controller="Vehicle" asp-action="Nearby" class="btn btn-primary btn-lg px-4 fw-semibold shadow">
+                    <i class="bi bi-geo-alt-fill me-2"></i> Find Nearby (Map)
+                </a>
+                @if (User.IsInRole("VehicleOwner"))
+                {
+                    <a asp-controller="Vehicle" asp-action="MyVehicles" class="btn btn-warning btn-lg px-4 fw-semibold text-dark shadow">
+                        <i class="bi bi-car-front-fill me-2"></i> My Vehicle Fleet
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Booking" asp-action="Create" class="btn btn-outline-light btn-lg px-4 fw-semibold">
+                        <i class="bi bi-calendar-plus me-2"></i> Book Now
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="col-lg-5 d-none d-lg-block text-center">
+            <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=700&q=80" 
+                 alt="Luxury Sports Car" 
+                 class="img-fluid rounded-4 shadow-lg border border-white border-2" 
+                 style="max-height: 320px; object-fit: cover;" />
+        </div>
+    </div>
+</div>
+
+<!-- Quick Search / Category Bar -->
+<div class="card border-0 shadow-sm rounded-4 p-3 mb-5 bg-white">
+    <div class="row g-2 align-items-center">
+        <div class="col-12 col-md-auto text-muted fw-semibold px-3">
+            <i class="bi bi-funnel-fill text-primary me-1"></i> Filter by Category:
+        </div>
+        <div class="col-12 col-md d-flex flex-wrap gap-2">
+            <a asp-controller="Vehicle" asp-action="Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3">All Cars</a>
+            <a asp-controller="Vehicle" asp-action="Index" asp-route-category="Sedan" class="btn btn-sm btn-outline-primary rounded-pill px-3">Sedans</a>
+            <a asp-controller="Vehicle" asp-action="Index" asp-route-category="SUV" class="btn btn-sm btn-outline-primary rounded-pill px-3">SUVs</a>
+            <a asp-controller="Vehicle" asp-action="Index" asp-route-category="Luxury" class="btn btn-sm btn-outline-primary rounded-pill px-3">Luxury</a>
+            <a asp-controller="Vehicle" asp-action="Index" asp-route-category="Sports" class="btn btn-sm btn-outline-primary rounded-pill px-3">Sports</a>
+            <a asp-controller="Vehicle" asp-action="Index" asp-route-category="Electric" class="btn btn-sm btn-outline-primary rounded-pill px-3">Electric</a>
+        </div>
+        <div class="col-12 col-md-auto text-md-end">
+            <a asp-controller="Vehicle" asp-action="Index" class="btn btn-primary btn-sm rounded-pill px-3">
+                View All Vehicles <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Key Features -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="p-4 bg-white rounded-4 border text-center h-100 shadow-sm">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                <i class="bi bi-shield-check fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Verified Fleet</h5>
+            <p class="text-muted small mb-0">Every vehicle undergoes rigorous safety checks and sanitization before every rental.</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="p-4 bg-white rounded-4 border text-center h-100 shadow-sm">
+            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                <i class="bi bi-tag fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Transparent Pricing</h5>
+            <p class="text-muted small mb-0">No hidden fees, no surge surprises. Clear daily rates with inclusive basic insurance.</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="p-4 bg-white rounded-4 border text-center h-100 shadow-sm">
+            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                <i class="bi bi-lightning-charge fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Instant Booking</h5>
+            <p class="text-muted small mb-0">Reserve in under two minutes with instant confirmation and fast check-in pickup.</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="p-4 bg-white rounded-4 border text-center h-100 shadow-sm">
+            <div class="bg-info bg-opacity-10 text-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px;">
+                <i class="bi bi-headset fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">24/7 Road Assistance</h5>
+            <p class="text-muted small mb-0">Round-the-clock emergency support and nationwide breakdown assistance wherever you drive.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Vehicles Grid -->
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h6 class="text-primary text-uppercase fw-bold letter-spacing-1 mb-1">Our Showcase</h6>
+        <h2 class="fw-bold mb-0">Featured Vehicles Available Now</h2>
+    </div>
+    <a asp-controller="Vehicle" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4">
+        View Entire Fleet (@featuredVehicles.Count Available) <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+</div>
+
+@if (featuredVehicles.Any())
+{
+    <div class="row g-4 mb-5">
+        @foreach (var car in featuredVehicles)
+        {
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-custom h-100">
+                    <div class="vehicle-img-wrapper">
+                        <img src="@(string.IsNullOrEmpty(car.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80" : car.ImageUrl)" 
+                             alt="@car.FullName" 
+                             class="vehicle-img" />
+                        <span class="vehicle-badge-category">@car.Category</span>
+                        @if (car.IsAvailable)
+                        {
+                            <span class="vehicle-badge-status bg-success text-white">
+                                <i class="bi bi-check-circle-fill me-1"></i> Available
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="vehicle-badge-status bg-danger text-white">
+                                <i class="bi bi-x-circle-fill me-1"></i> Booked
+                            </span>
+                        }
+                    </div>
+
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="fw-bold mb-0">@car.Make @car.Model</h5>
+                                <small class="text-muted">Model Year: @car.Year</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-primary fw-bold fs-5">₹@car.DailyRate.ToString("N0")</div>
+                                <small class="text-muted">/ day</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 my-3">
+                            <span class="spec-pill"><i class="bi bi-gear-wide text-secondary"></i> @car.Transmission</span>
+                            <span class="spec-pill"><i class="bi bi-fuel-pump text-secondary"></i> @car.FuelType</span>
+                            <span class="spec-pill"><i class="bi bi-people text-secondary"></i> @car.Seats Seats</span>
+                        </div>
+
+                        <p class="text-muted small flex-grow-1 mb-3">
+                            @(string.IsNullOrEmpty(car.Description) ? "Comfortable, fuel-efficient and fully equipped for your city trips and highway adventures." : (car.Description.Length > 90 ? car.Description.Substring(0, 90) + "..." : car.Description))
+                        </p>
+
+                        <div class="d-flex gap-2 pt-2 border-top">
+                            <a asp-controller="Vehicle" asp-action="Details" asp-route-id="@car.Id" class="btn btn-outline-secondary btn-sm flex-fill rounded-pill">
+                                <i class="bi bi-info-circle me-1"></i> Details
+                            </a>
+                            @if (!User.IsInRole("VehicleOwner"))
+                            {
+                                @if (car.IsAvailable)
+                                {
+                                    <a asp-controller="Booking" asp-action="Create" asp-route-vehicleId="@car.Id" class="btn btn-primary btn-sm flex-fill rounded-pill">
+                                        <i class="bi bi-calendar-check me-1"></i> Rent Now
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-secondary btn-sm flex-fill rounded-pill" disabled>Unavailable</button>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card border-0 bg-white rounded-4 p-5 text-center shadow-sm mb-5">
+        <div class="bg-light text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 72px; height: 72px;">
+            <i class="bi bi-car-front fs-1"></i>
+        </div>
+        <h4 class="fw-bold">No Vehicles Added Yet</h4>
+        <p class="text-muted">Get started by creating your first vehicle in the fleet catalog!</p>
+        <div class="d-flex justify-content-center gap-3 mt-2">
+            @if (User.IsInRole("VehicleOwner"))
+            {
+                <a asp-controller="Vehicle" asp-action="Create" class="btn btn-primary rounded-pill px-4">
+                    <i class="bi bi-plus-circle me-2"></i> Add First Vehicle
+                </a>
+            }
+            <a asp-controller="Vehicle" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+                View Fleet
+            </a>
+        </div>
+    </div>
+}
+
+<!-- How It Works -->
+<div class="bg-white rounded-4 p-5 border shadow-sm mb-5">
+    <div class="text-center mb-5">
+        <h6 class="text-primary text-uppercase fw-bold letter-spacing-1 mb-1">Simple & Fast</h6>
+        <h2 class="fw-bold">How To Rent in 3 Easy Steps</h2>
+    </div>
+
+    <div class="row g-4 text-center">
+        <div class="col-md-4">
+            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fs-4 fw-bold mb-3" style="width: 60px; height: 60px;">1</div>
+            <h5 class="fw-bold">Choose Your Vehicle</h5>
+            <p class="text-muted small">Browse through our curated fleet of well-maintained vehicles and select the one matching your travel needs.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fs-4 fw-bold mb-3" style="width: 60px; height: 60px;">2</div>
+            <h5 class="fw-bold">Select Dates & Reserve</h5>
+            <p class="text-muted small">Pick your start and end dates with real-time availability and transparent pricing calculation.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center fs-4 fw-bold mb-3" style="width: 60px; height: 60px;">3</div>
+            <h5 class="fw-bold">Hit The Open Road</h5>
+            <p class="text-muted small">Pick up the keys at our convenient hub or request doorstep delivery, then enjoy your journey!</p>
+        </div>
+    </div>
+</div>
+
+<!-- Testimonials / Recent Reviews -->
+@if (recentReviews.Any())
+{
+    <div class="mb-5">
+        <div class="text-center mb-4">
+            <h6 class="text-primary text-uppercase fw-bold letter-spacing-1 mb-1">Feedback</h6>
+            <h2 class="fw-bold">What Our Customers Say</h2>
+        </div>
+        <div class="row g-4">
+            @foreach (var review in recentReviews)
+            {
+                <div class="col-md-4">
+                    <div class="card border-0 bg-white shadow-sm rounded-4 p-4 h-100">
+                        <div class="star-rating mb-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (i <= review.Rating)
+                                {
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-star text-secondary opacity-50"></i>
+                                }
+                            }
+                        </div>
+                        <p class="card-text text-muted fst-italic flex-grow-1">"@review.Comment"</p>
+                        <div class="d-flex align-items-center pt-3 border-top mt-2">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3 d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0">@(review.User?.FullName ?? "Satisfied Driver")</h6>
+                                <small class="text-muted">Reviewed @review.Vehicle?.FullName</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- CTA Banner -->
+<div class="p-5 text-center text-white rounded-4 shadow-sm" style="background: linear-gradient(135deg, #1e293b, #0f172a);">
+    <h2 class="fw-bold mb-2">Ready to hit the open road?</h2>
+    <p class="lead opacity-80 mb-4 mx-auto" style="max-width: 600px;">
+        Join thousands of satisfied travelers who trust RentDrive for all their weekend road trips, business travels, and daily commutes.
+    </p>
+    <a asp-controller="Vehicle" asp-action="Index" class="btn btn-primary btn-lg rounded-pill px-5 fw-semibold">
+        Explore All Cars Now
+    </a>
 </div>

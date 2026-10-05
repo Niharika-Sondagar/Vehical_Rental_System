@@ -1,14 +1,14 @@
-﻿using Vehical_Rental.Models;
+using Vehical_Rental.Models;
 
 namespace Vehical_Rental.Repositories.Interfaces
 {
     public interface IUserRepository
     {
-        Task<IEnumerable<User>> GetAllAsync();
-        Task<User?> GetByIdAsync(int id);
-        Task<User?> GetByEmailAsync(string email);
-        Task AddAsync(User user);
-        Task UpdateAsync(User user);
-        Task DeleteAsync(int id);
+        Task<IEnumerable<ApplicationUser>> GetAllAsync();
+        Task<ApplicationUser?> GetByIdAsync(string id);
+        Task<ApplicationUser?> GetByEmailAsync(string email);
+        Task AddAsync(ApplicationUser user);
+        Task UpdateAsync(ApplicationUser user);
+        Task DeleteAsync(string id);
     }
 }

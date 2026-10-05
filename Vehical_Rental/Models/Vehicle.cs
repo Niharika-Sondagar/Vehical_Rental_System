@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Vehical_Rental.Models
@@ -28,7 +28,7 @@ namespace Vehical_Rental.Models
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(1, 10000)]
+        [Range(100, 500000, ErrorMessage = "Daily rate must be between ₹100 and ₹5,00,000.")]
         public decimal DailyRate { get; set; }
 
         [Required]
@@ -50,6 +50,12 @@ namespace Vehical_Rental.Models
 
         public bool IsAvailable { get; set; } = true;
 
+        // Vehicle Owner Association
+        public string? OwnerId { get; set; }
+
+        [ForeignKey("OwnerId")]
+        public virtual ApplicationUser? Owner { get; set; }
+
         // Navigation properties
         public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
@@ -59,5 +65,8 @@ namespace Vehical_Rental.Models
 
         [NotMapped]
         public double AverageRating => Reviews.Any() ? Math.Round(Reviews.Average(r => r.Rating), 1) : 5.0;
-    }
+        public double Latitude { get; set; }
+
+        public double Longitude { get; set; }
+     }
 }

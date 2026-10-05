@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Vehical_Rental.Data;
 using Vehical_Rental.Models;
 using Vehical_Rental.Repositories.Interfaces;
@@ -19,6 +19,8 @@ namespace Vehical_Rental.Repositories.Implementations
             return await _context.Bookings
                 .Include(b => b.User)
                 .Include(b => b.Vehicle)
+                    .ThenInclude(v => v!.Owner)
+                .Include(b => b.Payment)
                 .ToListAsync();
         }
 
@@ -27,7 +29,32 @@ namespace Vehical_Rental.Repositories.Implementations
             return await _context.Bookings
                 .Include(b => b.User)
                 .Include(b => b.Vehicle)
+                    .ThenInclude(v => v!.Owner)
+                .Include(b => b.Payment)
                 .FirstOrDefaultAsync(b => b.Id == id);
+        }
+
+        public async Task<IEnumerable<Booking>> GetByOwnerIdAsync(string ownerId)
+        {
+            return await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Vehicle)
+                .Include(b => b.Payment)
+                .Where(b => b.Vehicle != null && b.Vehicle.OwnerId == ownerId)
+                .OrderByDescending(b => b.BookingDate)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Booking>> GetByCustomerIdAsync(string customerId)
+        {
+            return await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Vehicle)
+                    .ThenInclude(v => v!.Owner)
+                .Include(b => b.Payment)
+                .Where(b => b.UserId == customerId)
+                .OrderByDescending(b => b.BookingDate)
+                .ToListAsync();
         }
 
         public async Task AddAsync(Booking booking)
@@ -35,19 +62,47 @@ namespace Vehical_Rental.Repositories.Implementations
             await _context.Bookings.AddAsync(booking);
             await _context.SaveChangesAsync();
         }
+
         public async Task<bool> IsVehicleAvailableAsync(
-    int vehicleId,
-    DateTime startDate,
-    DateTime endDate)
+            int vehicleId,
+            DateTime startDate,
+            DateTime endDate,
+            int? excludeBookingId = null)
         {
+            var start = startDate.Date;
+            var end = endDate.Date;
+
             var hasConflict = await _context.Bookings
                 .AnyAsync(b =>
                     b.VehicleId == vehicleId &&
-                    b.StartDate < endDate &&
-                    b.EndDate > startDate);
+                    (excludeBookingId == null || b.Id != excludeBookingId) &&
+                    (b.Status == "Pending" || b.Status == "Accepted" || b.Status == "Confirmed") &&
+                    b.StartDate.Date < end &&
+                    b.EndDate.Date > start);
 
             return !hasConflict;
         }
+
+        public async Task<bool> HasCustomerActiveBookingOverlapAsync(
+            string customerId,
+            DateTime startDate,
+            DateTime endDate,
+            int? excludeBookingId = null)
+        {
+            if (string.IsNullOrEmpty(customerId)) return false;
+
+            var start = startDate.Date;
+            var end = endDate.Date;
+
+            return await _context.Bookings
+                .AnyAsync(b =>
+                    b.UserId == customerId &&
+                    (excludeBookingId == null || b.Id != excludeBookingId) &&
+                    (b.Status == "Pending" || b.Status == "Accepted" || b.Status == "Confirmed") &&
+                    b.StartDate.Date < end &&
+                    b.EndDate.Date > start);
+        }
+
         public async Task UpdateAsync(Booking booking)
         {
             _context.Bookings.Update(booking);
@@ -57,7 +112,6 @@ namespace Vehical_Rental.Repositories.Implementations
         public async Task DeleteAsync(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
-
             if (booking != null)
             {
                 _context.Bookings.Remove(booking);

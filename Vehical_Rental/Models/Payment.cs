@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Vehical_Rental.Models
@@ -13,7 +13,7 @@ namespace Vehical_Rental.Models
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
-        [Range(0.01, 100000)]
+        [Range(1, 10000000, ErrorMessage = "Payment amount must be between ₹1 and ₹1,00,00,000.")]
         public decimal Amount { get; set; }
 
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;

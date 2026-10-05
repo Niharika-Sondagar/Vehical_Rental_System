@@ -1,5 +1,96 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@inject Vehical_Rental.Services.Interfaces.IBookingService BookingService
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
 @{
+    ViewData["Title"] = "Business Reports";
+    var bookings = (await BookingService.GetAllAsync()).ToList();
+    var vehicles = (await VehicleService.GetAllAsync()).ToList();
+    var totalSales = bookings.Where(b => b.Status != "Cancelled").Sum(b => b.TotalPrice);
+    var confirmedBookings = bookings.Count(b => b.Status == "Confirmed" || b.Status == "Completed");
 }
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Rental Performance & Financial Reports</h2>
+        <p class="text-muted mb-0">Monthly and category analytics for fleet revenue and booking frequency.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-outline-secondary rounded-pill px-4 d-print-none">
+        <i class="bi bi-printer me-1"></i> Print Report
+    </button>
+</div>
+
+<!-- Key Performance Indicators -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <span class="text-muted small text-uppercase fw-semibold">Gross Revenue</span>
+            <h3 class="fw-bold text-primary mt-1 mb-0">₹@totalSales.ToString("N2")</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <span class="text-muted small text-uppercase fw-semibold">Successful Rentals</span>
+            <h3 class="fw-bold text-success mt-1 mb-0">@confirmedBookings</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <span class="text-muted small text-uppercase fw-semibold">Fleet Utilization</span>
+            <h3 class="fw-bold text-warning mt-1 mb-0">
+                @(vehicles.Any() ? Math.Round((double)vehicles.Count(v => !v.IsAvailable) / vehicles.Count * 100, 1) : 0)%
+            </h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <span class="text-muted small text-uppercase fw-semibold">Avg. Rental Value</span>
+            <h3 class="fw-bold text-dark mt-1 mb-0">
+                ₹@(confirmedBookings > 0 ? (totalSales / confirmedBookings).ToString("N2") : "0.00")
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Vehicle Revenue Breakdown -->
+<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+    <h5 class="fw-bold mb-3">Vehicle Performance Breakdown</h5>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th>Vehicle</th>
+                    <th>Vehicle Owner</th>
+                    <th>Category</th>
+                    <th>Daily Rate</th>
+                    <th>Bookings</th>
+                    <th>Total Generated</th>
+                    <th>Current Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var car in vehicles)
+                {
+                    var carBookings = bookings.Where(b => b.VehicleId == car.Id && b.Status != "Cancelled").ToList();
+                    var carRevenue = carBookings.Sum(b => b.TotalPrice);
+                    <tr>
+                        <td class="fw-semibold">@car.FullName</td>
+                        <td>@(car.Owner?.FullName ?? "Registered Host")</td>
+                        <td><span class="badge bg-light text-dark border">@car.Category</span></td>
+                        <td>₹@car.DailyRate.ToString("N2")</td>
+                        <td>@carBookings.Count</td>
+                        <td class="fw-bold text-primary">₹@carRevenue.ToString("N2")</td>
+                        <td>
+                            @if (car.IsAvailable)
+                            {
+                                <span class="badge bg-success">Available</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Rented Out</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

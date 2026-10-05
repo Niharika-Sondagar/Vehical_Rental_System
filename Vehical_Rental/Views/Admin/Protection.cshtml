@@ -1,0 +1,365 @@
+@model IEnumerable<Vehical_Rental.Models.Vehicle>
+@{
+    ViewData["Title"] = "System Protection & Security Center";
+    var userSecurityList = ViewBag.UserSecurityList as List<(Vehical_Rental.Models.ApplicationUser User, bool IsLockedOut)> 
+        ?? new List<(Vehical_Rental.Models.ApplicationUser User, bool IsLockedOut)>();
+    var suspendedUsersCount = ViewBag.SuspendedUsersCount ?? 0;
+    var suspendedVehiclesCount = ViewBag.SuspendedVehiclesCount ?? 0;
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-shield-check text-primary me-2"></i>System Protection & Security Center</h2>
+        <p class="text-muted mb-0">Monitor platform integrity, enforce fleet safety moderation, and control user access to protect the ecosystem.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </a>
+        <a asp-action="Dashboard" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-graph-up me-1"></i> System Analytics
+        </a>
+    </div>
+</div>
+
+<!-- Security Status KPI Banners -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-success border-4 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted text-uppercase fw-semibold small">Platform Guard</span>
+                    <h3 class="fw-bold text-success mt-1 mb-0">Active</h3>
+                    <small class="text-muted">Identity RBAC &amp; Anti-CSRF Enabled</small>
+                </div>
+                <div class="bg-success bg-opacity-10 text-success rounded-circle p-3">
+                    <i class="bi bi-shield-lock-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-danger border-4 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted text-uppercase fw-semibold small">Suspended Accounts</span>
+                    <h3 class="fw-bold text-danger mt-1 mb-0">@suspendedUsersCount</h3>
+                    <small class="text-muted">Blocked for abuse / protection</small>
+                </div>
+                <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3">
+                    <i class="bi bi-person-x-fill fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-warning border-4 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted text-uppercase fw-semibold small">Flagged / Inactive Cars</span>
+                    <h3 class="fw-bold text-warning mt-1 mb-0">@suspendedVehiclesCount</h3>
+                    <small class="text-muted">Safety &amp; inspection hold</small>
+                </div>
+                <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3">
+                    <i class="bi bi-car-front fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-info border-4 h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted text-uppercase fw-semibold small">System Threat Level</span>
+                    <h3 class="fw-bold text-primary mt-1 mb-0">Minimal</h3>
+                    <small class="text-muted">Zero unauthorized breaches</small>
+                </div>
+                <div class="bg-info bg-opacity-10 text-info rounded-circle p-3">
+                    <i class="bi bi-activity fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Protection Sections Nav -->
+<ul class="nav nav-pills mb-4 gap-2" id="protectionTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active rounded-pill px-4" id="users-tab" data-bs-toggle="pill" data-bs-target="#users-panel" type="button" role="tab">
+            <i class="bi bi-person-shield me-2"></i> User Account Protection (@userSecurityList.Count)
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4" id="fleet-tab" data-bs-toggle="pill" data-bs-target="#fleet-panel" type="button" role="tab">
+            <i class="bi bi-car-front-fill me-2"></i> Fleet Safety Moderation (@Model.Count())
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill px-4" id="policies-tab" data-bs-toggle="pill" data-bs-target="#policies-panel" type="button" role="tab">
+            <i class="bi bi-file-earmark-lock2 me-2"></i> Platform Security Policies
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="protectionTabsContent">
+    <!-- Panel 1: User Account Security & Access Suspension -->
+    <div class="tab-pane fade show active" id="users-panel" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold mb-1">User Account Access &amp; Suspension Management</h5>
+                    <small class="text-muted">Admins can immediately lock or restore accounts to protect customers and vehicle owners from fraud.</small>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">User</th>
+                            <th>Email Address</th>
+                            <th>Role</th>
+                            <th>Member Since</th>
+                            <th>Protection Status</th>
+                            <th class="text-end pe-4">Protection Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in userSecurityList)
+                        {
+                            var u = item.User;
+                            var isLocked = item.IsLockedOut;
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                            <i class="bi bi-person-fill"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">@u.FullName</div>
+                                            <small class="text-muted">ID: @u.Id.Substring(0, Math.Min(8, u.Id.Length))...</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@u.Email</td>
+                                <td>
+                                    @if (u.Role == "Admin")
+                                    {
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1">Administrator</span>
+                                    }
+                                    else if (u.Role == "VehicleOwner")
+                                    {
+                                        <span class="badge bg-info text-white rounded-pill px-3 py-1">Vehicle Owner</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary rounded-pill px-3 py-1">Customer</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">@u.CreatedAt.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    @if (isLocked)
+                                    {
+                                        <span class="badge bg-danger rounded-pill px-3 py-1">
+                                            <i class="bi bi-lock-fill me-1"></i> Suspended
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success rounded-pill px-3 py-1">
+                                            <i class="bi bi-shield-check me-1"></i> Active &amp; Verified
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    @if (u.Role != "Admin")
+                                    {
+                                        <form asp-action="ToggleUserLockout" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            @if (isLocked)
+                                            {
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3" title="Restore Account">
+                                                    <i class="bi bi-unlock-fill me-1"></i> Restore
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Are you sure you want to suspend this user account to protect the system?');" title="Suspend Account">
+                                                    <i class="bi bi-slash-circle me-1"></i> Suspend
+                                                </button>
+                                            }
+                                        </form>
+                                        <a asp-action="DeleteUser" asp-route-id="@u.Id" class="btn btn-sm btn-outline-danger rounded-pill px-3 ms-1" title="Permanently Remove User From Platform">
+                                            <i class="bi bi-trash"></i> Remove
+                                        </a>
+                                    }
+                                    else if (u.Id == currentUserId)
+                                    {
+                                        <span class="badge bg-secondary rounded-pill px-3 py-2 small">Current Admin</span>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="DeleteUser" asp-route-id="@u.Id" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Remove Admin User">
+                                            <i class="bi bi-trash"></i> Remove
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel 2: Fleet Safety Moderation -->
+    <div class="tab-pane fade" id="fleet-panel" role="tabpanel">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-bold mb-1">Vehicle Listing Safety Moderation</h5>
+                    <small class="text-muted">Protect customers by reviewing and temporarily suspending listings that fail safety or insurance guidelines.</small>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Vehicle</th>
+                            <th>Vehicle Owner</th>
+                            <th>Category</th>
+                            <th>Plate</th>
+                            <th>Daily Rate</th>
+                            <th>Safety Status</th>
+                            <th class="text-end pe-4">Safety Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var car in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(string.IsNullOrEmpty(car.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=150&q=80" : car.ImageUrl)" 
+                                             alt="@car.FullName" class="rounded-3 me-2 object-fit-cover" style="width: 50px; height: 35px;" />
+                                        <div>
+                                            <div class="fw-bold">@car.FullName</div>
+                                            <small class="text-muted">Year: @car.Year</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@(car.Owner?.FullName ?? "Registered Owner")</div>
+                                    <small class="text-muted">@(car.Owner?.Email ?? "N/A")</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">@car.Category</span></td>
+                                <td><code>@car.LicensePlate</code></td>
+                                <td class="fw-bold text-primary">₹@car.DailyRate.ToString("N2")</td>
+                                <td>
+                                    @if (car.IsAvailable)
+                                    {
+                                        <span class="badge bg-success rounded-pill px-3 py-1">
+                                            <i class="bi bi-check-circle me-1"></i> Approved &amp; Available
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1">
+                                            <i class="bi bi-pause-circle me-1"></i> Suspended / Booked
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <form asp-action="ToggleVehicleSafety" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@car.Id" />
+                                        @if (car.IsAvailable)
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                                                <i class="bi bi-shield-slash me-1"></i> Suspend Car
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                                <i class="bi bi-shield-check me-1"></i> Make Available
+                                            </button>
+                                        }
+                                    </form>
+                                    <a asp-controller="Vehicle" asp-action="Details" asp-route-id="@car.Id" class="btn btn-sm btn-outline-secondary rounded-pill ms-1">Inspect</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel 3: Platform Security Policies -->
+    <div class="tab-pane fade" id="policies-panel" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-shield-lock text-primary me-2"></i>Access &amp; Role Integrity</h5>
+                    <ul class="list-group list-group-flush small">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <strong class="d-block">Vehicle Owner Isolation</strong>
+                                <span class="text-muted">Only registered Vehicle Owners can add, edit, or delete vehicles.</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Active</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <strong class="d-block">Ownership Validation Checks</strong>
+                                <span class="text-muted">A vehicle owner can only modify vehicles belonging to their own user ID.</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Enforced</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <strong class="d-block">Admin Architectural Separation</strong>
+                                <span class="text-muted">Admin role is focused purely on system analysis and ecosystem protection.</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Enforced</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-key-fill text-warning me-2"></i>Authentication &amp; Threat Safeguards</h5>
+                    <ul class="list-group list-group-flush small">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <strong class="d-block">Anti-CSRF Verification</strong>
+                                <span class="text-muted">ValidateAntiForgeryToken enforced on every POST action in the platform.</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Active</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <strong class="d-block">Brute-Force Lockout Defense</strong>
+                                <span class="text-muted">Automatic account lockout triggered upon repeated invalid credentials.</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Enabled</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <strong class="d-block">Encrypted Password Hashing</strong>
+                                <span class="text-muted">Identity PBKDF2 cryptographic hashing protects all stored user passwords.</span>
+                            </div>
+                            <span class="badge bg-success rounded-pill">Active</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

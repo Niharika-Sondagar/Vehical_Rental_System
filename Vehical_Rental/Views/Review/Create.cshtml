@@ -1,0 +1,99 @@
+@model Vehical_Rental.Models.Review
+@using System.Security.Claims
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
+@inject Vehical_Rental.Services.Interfaces.IUserService UserService
+@{
+    ViewData["Title"] = "Write a Review";
+    var vehicles = await VehicleService.GetAllAsync();
+    var users = await UserService.GetAllAsync();
+
+    int.TryParse(Context.Request.Query["vehicleId"], out int preselectedVehicleId);
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div class="bg-warning text-dark rounded-circle p-3 me-3 d-inline-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    <i class="bi bi-star-fill fs-3"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0">Write a Review</h3>
+                    <small class="text-muted">Rate your driving experience and help fellow travelers</small>
+                </div>
+            </div>
+
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small shadow-sm rounded-3"></div>
+
+                <!-- User Identification -->
+                @if (!string.IsNullOrEmpty(currentUserId))
+                {
+                    <input type="hidden" asp-for="UserId" value="@currentUserId" />
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label asp-for="UserId" class="form-label">Reviewing as User</label>
+                        <select asp-for="UserId" class="form-select" required>
+                            <option value="">-- Select Your Account --</option>
+                            @foreach (var u in users)
+                            {
+                                <option value="@u.Id">@u.FullName (@u.Email)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="UserId" class="text-danger small"></span>
+                    </div>
+                }
+
+                <!-- Vehicle Selection -->
+                <div class="mb-3">
+                    <label asp-for="VehicleId" class="form-label">Vehicle You Rented</label>
+                    <select asp-for="VehicleId" class="form-select" required>
+                        <option value="">-- Choose Vehicle --</option>
+                        @foreach (var v in vehicles)
+                        {
+                            <option value="@v.Id" selected="@(v.Id == preselectedVehicleId ? "selected" : null)">
+                                @v.FullName (@v.Category - Plate: @v.LicensePlate)
+                            </option>
+                        }
+                    </select>
+                    <span asp-validation-for="VehicleId" class="text-danger small"></span>
+                </div>
+
+                <!-- Star Rating -->
+                <div class="mb-3">
+                    <label asp-for="Rating" class="form-label">Overall Rating</label>
+                    <select asp-for="Rating" class="form-select fs-6" required>
+                        <option value="5" selected>⭐⭐⭐⭐⭐ - 5 Stars (Outstanding)</option>
+                        <option value="4">⭐⭐⭐⭐ - 4 Stars (Very Good)</option>
+                        <option value="3">⭐⭐⭐ - 3 Stars (Average / Fair)</option>
+                        <option value="2">⭐⭐ - 2 Stars (Below Expectation)</option>
+                        <option value="1">⭐ - 1 Star (Poor Experience)</option>
+                    </select>
+                    <span asp-validation-for="Rating" class="text-danger small"></span>
+                </div>
+
+                <!-- Comment -->
+                <div class="mb-4">
+                    <label asp-for="Comment" class="form-label">Your Review & Feedback</label>
+                    <textarea asp-for="Comment" class="form-control" rows="4" placeholder="How did the car drive? Was it clean, comfortable, and fuel-efficient? Any suggestions?" required minlength="5"></textarea>
+                    <span asp-validation-for="Comment" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4 rounded-pill">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm">
+                        <i class="bi bi-send me-1"></i> Submit Review
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
