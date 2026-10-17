@@ -81,6 +81,34 @@ namespace Vehical_Rental.Data
                 await userManager.UpdateAsync(ownerUser);
             }
 
+            // 3b. Seed Second Vehicle Owner User (Alex Carter)
+            var owner2Email = "alex.owner@rental.com";
+            var owner2User = await userManager.FindByEmailAsync(owner2Email);
+            if (owner2User == null)
+            {
+                owner2User = new ApplicationUser
+                {
+                    UserName = owner2Email,
+                    Email = owner2Email,
+                    EmailConfirmed = true,
+                    FullName = "Alex Carter (Owner)",
+                    PhoneNumber = "9876543215",
+                    Address = "12 Ocean Drive, Mumbai, India",
+                    CreatedAt = DateTime.UtcNow.AddMonths(-3)
+                };
+
+                var createOwner2Result = await userManager.CreateAsync(owner2User, "Owner@123");
+                if (createOwner2Result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(owner2User, "VehicleOwner");
+                }
+            }
+            else if (owner2User.PhoneNumber != "9876543215")
+            {
+                owner2User.PhoneNumber = "9876543215";
+                await userManager.UpdateAsync(owner2User);
+            }
+
             // 4. Seed Sample Customer Users
             var user1Email = "john@example.com";
             var user1 = await userManager.FindByEmailAsync(user1Email);
@@ -190,6 +218,22 @@ namespace Vehical_Rental.Data
                         };
                     }
                     await context.SaveChangesAsync();
+                }
+
+                // Ensure fleet is distributed among owners so each owner has other owners' vehicles to rent
+                if (owner2User != null && ownerUser != null)
+                {
+                    var ownerVehicles = context.Vehicles.Where(v => v.OwnerId == ownerUser.Id).OrderBy(v => v.Id).ToList();
+                    var alexVehicles = context.Vehicles.Where(v => v.OwnerId == owner2User.Id).ToList();
+                    if (alexVehicles.Count < 3 && ownerVehicles.Count >= 6)
+                    {
+                        var toReassign = ownerVehicles.Skip(ownerVehicles.Count / 2).ToList();
+                        foreach (var v in toReassign)
+                        {
+                            v.OwnerId = owner2User.Id;
+                        }
+                        await context.SaveChangesAsync();
+                    }
                 }
 
                 return; // Vehicles and sample bookings already seeded
@@ -335,7 +379,14 @@ namespace Vehical_Rental.Data
                 }
             };
 
-            if (ownerUser != null)
+            if (ownerUser != null && owner2User != null)
+            {
+                for (int i = 0; i < vehicles.Count; i++)
+                {
+                    vehicles[i].OwnerId = (i < 4) ? ownerUser.Id : owner2User.Id;
+                }
+            }
+            else if (ownerUser != null)
             {
                 foreach (var v in vehicles)
                 {
