@@ -1,5 +1,109 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model IEnumerable<Vehical_Rental.Models.Vehicle>
+@inject Vehical_Rental.Services.Interfaces.IBookingService BookingService
 @{
+    ViewData["Title"] = "Admin - Fleet Analysis & Oversight";
+    var bookings = (await BookingService.GetAllAsync()).ToList();
 }
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Fleet Analysis &amp; Safety Oversight</h2>
+        <p class="text-muted mb-0">Comprehensive analysis of all vehicles listed by registered Vehicle Owners, revenue telemetry, and safety moderation.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Dashboard" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-graph-up me-1"></i> Fleet Analytics
+        </a>
+        <a asp-action="Protection" class="btn btn-outline-danger rounded-pill px-3">
+            <i class="bi bi-shield-check me-1"></i> Protection Center
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="p-4 border-bottom bg-light d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold mb-0">Ecosystem Fleet Inventory (@Model.Count() Vehicles)</h5>
+            <small class="text-muted">Vehicles are added and managed by verified Vehicle Owners</small>
+        </div>
+        <span class="badge bg-primary rounded-pill px-3 py-2">
+            <i class="bi bi-eye-fill me-1"></i> Analysis Mode
+        </span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">Vehicle</th>
+                    <th>Vehicle Owner</th>
+                    <th>Category</th>
+                    <th>Plate</th>
+                    <th>Rate / Day</th>
+                    <th>Bookings</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var car in Model)
+                {
+                    var carBookings = bookings.Where(b => b.VehicleId == car.Id && b.Status != "Cancelled").ToList();
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <img src="@(string.IsNullOrEmpty(car.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=150&q=80" : car.ImageUrl)" 
+                                     alt="@car.FullName" class="rounded-3 me-2 object-fit-cover" style="width: 55px; height: 38px;" />
+                                <div>
+                                    <div class="fw-bold">@car.FullName</div>
+                                    <small class="text-muted">@car.Transmission &bull; @car.FuelType &bull; @car.Year</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">@(car.Owner?.FullName ?? "Registered Owner")</div>
+                            <small class="text-muted">@(car.Owner?.Email ?? "N/A")</small>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">@car.Category</span></td>
+                        <td><code>@car.LicensePlate</code></td>
+                        <td class="fw-bold text-primary">₹@car.DailyRate.ToString("N2")</td>
+                        <td>
+                            <span class="badge bg-light text-secondary border">@carBookings.Count rentals</span>
+                        </td>
+                        <td>
+                            @if (car.IsAvailable)
+                            {
+                                <span class="badge bg-success rounded-pill px-3 py-1">Available</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark rounded-pill px-3 py-1">Rented / Held</span>
+                            }
+                        </td>
+                        <td class="text-end pe-4">
+                            <a asp-controller="Vehicle" asp-action="Details" asp-route-id="@car.Id" class="btn btn-sm btn-outline-secondary rounded-pill me-1" title="Analyze Vehicle">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
+                            <form asp-action="ToggleVehicleSafety" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@car.Id" />
+                                <input type="hidden" name="returnAction" value="Vehicles" />
+                                @if (car.IsAvailable)
+                                {
+                                    <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill" title="Suspend for safety" onclick="return confirm('Suspend this vehicle listing from the platform?');">
+                                        <i class="bi bi-shield-slash"></i> Hold
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" title="Approve / make available">
+                                        <i class="bi bi-shield-check"></i> Restore
+                                    </button>
+                                }
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

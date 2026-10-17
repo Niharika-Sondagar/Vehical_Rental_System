@@ -1,5 +1,396 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@using System.Security.Claims
+@inject Vehical_Rental.Services.Interfaces.IUserService UserService
+@inject Vehical_Rental.Services.Interfaces.IBookingService BookingService
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
 @{
+    ViewData["Title"] = "My Profile";
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+    var user = !string.IsNullOrEmpty(userEmail) ? await UserService.GetByEmailAsync(userEmail) : null;
+    var allBookings = await BookingService.GetAllAsync();
+    var userBookings = user != null ? allBookings.Where(b => b.UserId == user.Id).OrderByDescending(b => b.BookingDate).ToList() : new List<Vehical_Rental.Models.Booking>();
+    
+    // For vehicle owner
+    var ownerVehicles = user != null && User.IsInRole("VehicleOwner") ? (await VehicleService.GetByOwnerIdAsync(user.Id)).ToList() : new List<Vehical_Rental.Models.Vehicle>();
+    var ownerBookings = user != null && User.IsInRole("VehicleOwner") 
+        ? allBookings.Where(b => b.Vehicle != null && b.Vehicle.OwnerId == user.Id).OrderByDescending(b => b.BookingDate).ToList() 
+        : new List<Vehical_Rental.Models.Booking>();
+    var totalEarnings = ownerBookings.Where(b => b.Status == "Confirmed" || b.Status == "Completed").Sum(b => b.TotalPrice);
 }
+
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Profile Sidebar -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 text-center bg-white mb-4">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3 shadow" style="width: 80px; height: 80px;">
+                    <i class="bi bi-person fs-1"></i>
+                </div>
+                <h4 class="fw-bold mb-1">@(user?.FullName ?? User.Identity?.Name)</h4>
+                <p class="text-muted small mb-2">@(user?.Email ?? userEmail)</p>
+                <div class="mb-3">
+                    <span class="badge @(User.IsInRole("Admin") ? "bg-warning text-dark" : User.IsInRole("VehicleOwner") ? "bg-info text-white" : "bg-primary") px-3 py-2 rounded-pill">
+                        <i class="bi bi-shield-check me-1"></i> @(user?.Role ?? (User.IsInRole("VehicleOwner") ? "Vehicle Owner" : User.IsInRole("Admin") ? "Admin" : "Customer")) Account
+                    </span>
+                </div>
+
+                <a asp-action="EditProfile" class="btn btn-outline-primary btn-sm rounded-pill px-4 mb-3">
+                    <i class="bi bi-pencil-square me-1"></i> Edit Profile
+                </a>
+
+                <hr class="my-3">
+
+                <div class="text-start small">
+                    <div class="mb-3">
+                        <span class="text-muted d-block">Phone Number</span>
+                        <strong>@(string.IsNullOrEmpty(user?.PhoneNumber) ? "Not provided" : (user.PhoneNumber.StartsWith("+91") ? user.PhoneNumber : "+91 " + user.PhoneNumber))</strong>
+                    </div>
+                    <div class="mb-3">
+                        <span class="text-muted d-block">Registered Address</span>
+                        <strong>@(string.IsNullOrEmpty(user?.Address) ? "Not provided" : user.Address)</strong>
+                    </div>
+                    <div>
+                        <span class="text-muted d-block">Member Since</span>
+                        <strong>@(user?.CreatedAt.ToString("MMMM dd, yyyy") ?? "Active")</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                <div class="d-grid gap-2">
+                    <a asp-action="EditProfile" class="btn btn-outline-primary rounded-3 text-start">
+                        <i class="bi bi-person-gear text-primary me-2"></i> Update Profile Info
+                    </a>
+
+                    @if (User.IsInRole("VehicleOwner"))
+                    {
+                        <a asp-controller="Vehicle" asp-action="MyVehicles" class="btn btn-outline-primary rounded-3 text-start">
+                            <i class="bi bi-car-front-fill text-primary me-2"></i> My Vehicle Fleet
+                        </a>
+                        <a asp-controller="Vehicle" asp-action="Create" class="btn btn-success text-white rounded-3 text-start">
+                            <i class="bi bi-plus-circle me-2"></i> Add New Vehicle
+                        </a>
+                        <a asp-controller="Booking" asp-action="Requests" class="btn btn-outline-secondary rounded-3 text-start">
+                            <i class="bi bi-inbox me-2"></i> Booking Requests
+                            @if (ownerBookings.Any(b => b.Status == "Pending"))
+                            {
+                                <span class="badge bg-danger rounded-pill ms-2">@ownerBookings.Count(b => b.Status == "Pending") new</span>
+                            }
+                        </a>
+                        <a asp-controller="Booking" asp-action="Index" class="btn btn-outline-info rounded-3 text-start">
+                            <i class="bi bi-calendar2-check text-info me-2"></i> My Rentals (As Customer)
+                            @if (userBookings.Any())
+                            {
+                                <span class="badge bg-primary rounded-pill ms-2">@userBookings.Count</span>
+                            }
+                        </a>
+                        <a asp-controller="Vehicle" asp-action="Index" class="btn btn-outline-secondary rounded-3 text-start">
+                            <i class="bi bi-grid me-2"></i> Browse &amp; Rent Vehicles
+                        </a>
+                    }
+                    else if (User.IsInRole("Admin"))
+                    {
+                        <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-warning rounded-3 text-start">
+                            <i class="bi bi-speedometer2 text-warning me-2"></i> Admin Dashboard
+                        </a>
+                        <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-secondary rounded-3 text-start">
+                            <i class="bi bi-people me-2"></i> User Directory
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Vehicle" asp-action="Index" class="btn btn-outline-secondary rounded-3 text-start">
+                            <i class="bi bi-grid me-2"></i> Browse Vehicles
+                        </a>
+                        <a asp-controller="Booking" asp-action="Index" class="btn btn-outline-secondary rounded-3 text-start">
+                            <i class="bi bi-calendar2-check me-2"></i> My Bookings
+                        </a>
+                    }
+
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-grid">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger rounded-3 text-start">
+                            <i class="bi bi-box-arrow-right me-2"></i> Sign Out / Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area based on Role -->
+        <div class="col-lg-8">
+            @if (User.IsInRole("VehicleOwner"))
+            {
+                <!-- Vehicle Owner Dashboard Overview -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-primary border-4">
+                            <small class="text-muted text-uppercase fw-semibold">My Vehicles</small>
+                            <h3 class="fw-bold text-primary mt-1 mb-0">@ownerVehicles.Count</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-warning border-4">
+                            <small class="text-muted text-uppercase fw-semibold">Pending Requests</small>
+                            <h3 class="fw-bold text-warning mt-1 mb-0">@ownerBookings.Count(b => b.Status == "Pending")</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-success border-4">
+                            <small class="text-muted text-uppercase fw-semibold">Fleet Earnings</small>
+                            <h3 class="fw-bold text-success mt-1 mb-0">₹@totalEarnings.ToString("N0")</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                        <div>
+                            <h4 class="fw-bold mb-1">Recent Booking Requests on My Vehicles</h4>
+                            <small class="text-muted">Total Requests: @ownerBookings.Count</small>
+                        </div>
+                        <a asp-controller="Booking" asp-action="Requests" class="btn btn-primary btn-sm rounded-pill px-3">
+                            View All Requests <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+
+                    @if (ownerBookings.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var booking in ownerBookings.Take(5))
+                            {
+                                <div class="list-group-item px-0 py-3 border-bottom">
+                                    <div class="row align-items-center g-3">
+                                        <div class="col-sm-2">
+                                            <img src="@(string.IsNullOrEmpty(booking.Vehicle?.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" : booking.Vehicle.ImageUrl)" 
+                                                 alt="@booking.Vehicle?.FullName" 
+                                                 class="rounded-3 img-fluid object-fit-cover" 
+                                                 style="height: 60px; width: 100%;" />
+                                        </div>
+                                        <div class="col-sm-5">
+                                            <h6 class="fw-bold mb-1">@(booking.Vehicle?.FullName ?? $"Vehicle #{booking.VehicleId}")</h6>
+                                            <div class="small text-muted mb-1">
+                                                <i class="bi bi-person me-1"></i> Renter: <strong>@(booking.User?.FullName ?? "Customer")</strong>
+                                            </div>
+                                            <div class="small text-muted">
+                                                <i class="bi bi-calendar3 me-1"></i> @booking.StartDate.ToString("MMM dd") - @booking.EndDate.ToString("MMM dd, yyyy") (@booking.TotalDays days)
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-2 text-sm-center">
+                                            @if (booking.Status == "Confirmed")
+                                            {
+                                                <span class="badge bg-success rounded-pill px-2 py-1">Confirmed & Paid</span>
+                                            }
+                                            else if (booking.Status == "Accepted")
+                                            {
+                                                <span class="badge bg-info text-white rounded-pill px-2 py-1">Accepted</span>
+                                            }
+                                            else if (booking.Status == "Pending")
+                                            {
+                                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1">Pending Approval</span>
+                                            }
+                                            else if (booking.Status == "Rejected")
+                                            {
+                                                <span class="badge bg-danger rounded-pill px-2 py-1">Rejected</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary rounded-pill px-2 py-1">@booking.Status</span>
+                                            }
+                                            <div class="small fw-bold text-dark mt-1">₹@booking.TotalPrice.ToString("N2")</div>
+                                        </div>
+                                        <div class="col-sm-3 text-sm-end">
+                                            <a asp-controller="Booking" asp-action="Requests" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                Manage
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <div class="text-muted mb-3"><i class="bi bi-inbox fs-1"></i></div>
+                            <h5>No Booking Requests Yet</h5>
+                            <p class="text-muted small">When customers request to rent your vehicles, their requests will appear here.</p>
+                            <a asp-controller="Vehicle" asp-action="MyVehicles" class="btn btn-primary rounded-pill px-4">
+                                Manage My Vehicles
+                            </a>
+                        </div>
+                    }
+                </div>
+
+                <!-- Vehicle Owner Personal Rentals (As Customer) -->
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                        <div>
+                            <h4 class="fw-bold mb-1"><i class="bi bi-calendar2-check text-info me-2"></i>My Rentals (As Customer)</h4>
+                            <small class="text-muted">Vehicles you have rented from other hosts: @userBookings.Count</small>
+                        </div>
+                        <a asp-controller="Vehicle" asp-action="Index" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                            <i class="bi bi-search me-1"></i> Rent a Vehicle
+                        </a>
+                    </div>
+
+                    @if (userBookings.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var booking in userBookings)
+                            {
+                                <div class="list-group-item px-0 py-3 border-bottom">
+                                    <div class="row align-items-center g-3">
+                                        <div class="col-sm-2">
+                                            <img src="@(string.IsNullOrEmpty(booking.Vehicle?.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" : booking.Vehicle.ImageUrl)" 
+                                                 alt="@booking.Vehicle?.FullName" 
+                                                 class="rounded-3 img-fluid object-fit-cover" 
+                                                 style="height: 60px; width: 100%;" />
+                                        </div>
+                                        <div class="col-sm-5">
+                                            <h6 class="fw-bold mb-1">@(booking.Vehicle?.FullName ?? $"Vehicle #{booking.VehicleId}")</h6>
+                                            <div class="small text-muted">
+                                                <i class="bi bi-calendar3 me-1"></i> @booking.StartDate.ToString("MMM dd") - @booking.EndDate.ToString("MMM dd, yyyy")
+                                            </div>
+                                            <small class="text-muted">Host: @(booking.Vehicle?.Owner?.FullName ?? "Fleet Host") &bull; Plate: @(booking.Vehicle?.LicensePlate ?? "N/A")</small>
+                                        </div>
+                                        <div class="col-sm-2 text-sm-center">
+                                            @if (booking.Status == "Confirmed")
+                                            {
+                                                <span class="badge bg-success rounded-pill px-2 py-1">Confirmed &amp; Paid</span>
+                                            }
+                                            else if (booking.Status == "Accepted")
+                                            {
+                                                <span class="badge bg-info text-white rounded-pill px-2 py-1">Owner Approved</span>
+                                            }
+                                            else if (booking.Status == "Pending")
+                                            {
+                                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1">Pending Approval</span>
+                                            }
+                                            else if (booking.Status == "Rejected")
+                                            {
+                                                <span class="badge bg-danger rounded-pill px-2 py-1">Rejected</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary rounded-pill px-2 py-1">@booking.Status</span>
+                                            }
+                                            <div class="small fw-bold text-dark mt-1">₹@booking.TotalPrice.ToString("N2")</div>
+                                        </div>
+                                        <div class="col-sm-3 text-sm-end">
+                                            @if (booking.Status == "Accepted")
+                                            {
+                                                <a asp-controller="Payment" asp-action="Index" asp-route-bookingId="@booking.Id" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm mb-1 d-inline-block">
+                                                    <i class="bi bi-credit-card me-1"></i> Pay ₹@booking.TotalPrice.ToString("N0")
+                                                </a>
+                                            }
+                                            <a asp-controller="Booking" asp-action="Details" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <div class="text-muted mb-2"><i class="bi bi-car-front fs-2"></i></div>
+                            <h6>No Personal Rentals Yet</h6>
+                            <p class="text-muted small mb-3">You can also act as a customer and rent vehicles from other owners whenever you need one.</p>
+                            <a asp-controller="Vehicle" asp-action="Index" class="btn btn-outline-primary rounded-pill px-4 btn-sm">
+                                Explore Vehicles to Rent
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <!-- Customer Bookings History -->
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                        <div>
+                            <h4 class="fw-bold mb-1">My Rental Bookings</h4>
+                            <small class="text-muted">Total Reservations: @userBookings.Count</small>
+                        </div>
+                        <a asp-controller="Vehicle" asp-action="Index" class="btn btn-primary btn-sm rounded-pill px-3">
+                            <i class="bi bi-plus-lg me-1"></i> Rent a Vehicle
+                        </a>
+                    </div>
+
+                    @if (userBookings.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var booking in userBookings)
+                            {
+                                <div class="list-group-item px-0 py-3 border-bottom">
+                                    <div class="row align-items-center g-3">
+                                        <div class="col-sm-2">
+                                            <img src="@(string.IsNullOrEmpty(booking.Vehicle?.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" : booking.Vehicle.ImageUrl)" 
+                                                 alt="@booking.Vehicle?.FullName" 
+                                                 class="rounded-3 img-fluid object-fit-cover" 
+                                                 style="height: 60px; width: 100%;" />
+                                        </div>
+                                        <div class="col-sm-5">
+                                            <h6 class="fw-bold mb-1">@(booking.Vehicle?.FullName ?? $"Vehicle #{booking.VehicleId}")</h6>
+                                            <div class="small text-muted">
+                                                <i class="bi bi-calendar3 me-1"></i> @booking.StartDate.ToString("MMM dd") - @booking.EndDate.ToString("MMM dd, yyyy")
+                                            </div>
+                                            <small class="text-muted">Plate: @(booking.Vehicle?.LicensePlate ?? "N/A")</small>
+                                        </div>
+                                        <div class="col-sm-2 text-sm-center">
+                                            @if (booking.Status == "Confirmed")
+                                            {
+                                                <span class="badge bg-success rounded-pill px-2 py-1">Confirmed & Paid</span>
+                                            }
+                                            else if (booking.Status == "Accepted")
+                                            {
+                                                <span class="badge bg-info text-white rounded-pill px-2 py-1">Owner Approved</span>
+                                            }
+                                            else if (booking.Status == "Pending")
+                                            {
+                                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1">Pending Approval</span>
+                                            }
+                                            else if (booking.Status == "Rejected")
+                                            {
+                                                <span class="badge bg-danger rounded-pill px-2 py-1">Rejected</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary rounded-pill px-2 py-1">@booking.Status</span>
+                                            }
+                                            <div class="small fw-bold text-dark mt-1">₹@booking.TotalPrice.ToString("N2")</div>
+                                        </div>
+                                        <div class="col-sm-3 text-sm-end">
+                                            @if (booking.Status == "Accepted")
+                                            {
+                                                <a asp-controller="Payment" asp-action="Index" asp-route-bookingId="@booking.Id" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm mb-1 d-inline-block">
+                                                    <i class="bi bi-credit-card me-1"></i> Pay ₹@booking.TotalPrice.ToString("N0")
+                                                </a>
+                                            }
+                                            <a asp-controller="Booking" asp-action="Details" asp-route-id="@booking.Id" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <div class="text-muted mb-3"><i class="bi bi-calendar-x fs-1"></i></div>
+                            <h5>No Bookings Yet</h5>
+                            <p class="text-muted small">You haven't requested any vehicle rentals yet. Explore our fleet today!</p>
+                            <a asp-controller="Vehicle" asp-action="Index" class="btn btn-primary rounded-pill px-4">
+                                Explore Vehicles
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

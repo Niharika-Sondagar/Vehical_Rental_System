@@ -1,0 +1,161 @@
+@model Vehical_Rental.Models.ApplicationUser
+@{
+    ViewData["Title"] = $"Remove User - {Model.FullName}";
+    bool isSelf = ViewBag.IsSelf ?? false;
+    bool isLastAdmin = ViewBag.IsLastAdmin ?? false;
+    int activeBookings = ViewBag.ActiveBookingsCount ?? 0;
+    int ownedVehicles = ViewBag.OwnedVehiclesCount ?? 0;
+    int reviewsCount = ViewBag.ReviewsCount ?? 0;
+    bool canDelete = !isSelf && !isLastAdmin;
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-8 col-xl-7">
+        <!-- Breadcrumb / Back Link -->
+        <div class="mb-3">
+            <a asp-action="Users" class="text-decoration-none text-muted small">
+                <i class="bi bi-arrow-left me-1"></i> Back to User Directory
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="bg-danger bg-opacity-10 border-bottom border-danger border-opacity-25 p-4 text-center">
+                <div class="bg-danger text-white rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm mb-3" style="width: 64px; height: 64px;">
+                    <i class="bi bi-person-x-fill fs-2"></i>
+                </div>
+                <h3 class="fw-bold text-danger mb-1">Remove User From Platform</h3>
+                <p class="text-muted small mb-0">Review the account credentials and impact before confirming removal.</p>
+            </div>
+
+            <div class="p-4 p-md-5">
+                @if (isSelf)
+                {
+                    <div class="alert alert-danger border-0 shadow-sm rounded-3 d-flex align-items-center gap-3 mb-4">
+                        <i class="bi bi-shield-slash-fill fs-3 text-danger"></i>
+                        <div>
+                            <strong class="d-block">Self-Deletion Blocked</strong>
+                            <span class="small">You cannot remove your own administrator account while signed in to prevent administrative lockout.</span>
+                        </div>
+                    </div>
+                }
+                else if (isLastAdmin)
+                {
+                    <div class="alert alert-danger border-0 shadow-sm rounded-3 d-flex align-items-center gap-3 mb-4">
+                        <i class="bi bi-shield-exclamation fs-3 text-danger"></i>
+                        <div>
+                            <strong class="d-block">Sole Administrator Protected</strong>
+                            <span class="small">This user is the only Administrator in the system. The platform requires at least one active administrator.</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-3 mb-4">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
+                        <div>
+                            <strong class="d-block">Permanent Action Warning</strong>
+                            <span class="small">Removing this account will permanently delete user credentials, role permissions, and cleanly cascade purge their related reservation and fleet data.</span>
+                        </div>
+                    </div>
+                }
+
+                <!-- User Profile Card -->
+                <div class="card border rounded-3 p-3 bg-light mb-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3 d-inline-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="bi bi-person-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">@Model.FullName</h5>
+                            <span class="text-muted small">User ID: @Model.Id</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 small">
+                        <div class="col-sm-6">
+                            <span class="text-muted d-block">Email Address</span>
+                            <span class="fw-semibold text-dark">@Model.Email</span>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted d-block">Phone Number</span>
+                            <span class="fw-semibold text-dark">@(string.IsNullOrEmpty(Model.PhoneNumber) ? "Not provided" : Model.PhoneNumber)</span>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted d-block">Account Role</span>
+                            <span class="badge @(Model.Role == "Admin" ? "bg-warning text-dark" : Model.Role == "VehicleOwner" ? "bg-info text-white" : "bg-primary") rounded-pill px-3 py-1">
+                                @Model.Role
+                            </span>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted d-block">Member Since</span>
+                            <span class="fw-semibold text-dark">@Model.CreatedAt.ToString("MMMM dd, yyyy")</span>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-muted d-block">Physical Address</span>
+                            <span class="fw-semibold text-dark">@(string.IsNullOrEmpty(Model.Address) ? "No address specified" : Model.Address)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Removal Impact Breakdown -->
+                <h6 class="fw-bold text-uppercase small text-muted mb-3">Associated Data &amp; Removal Impact</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <div class="border rounded-3 p-3 text-center bg-white h-100 shadow-sm">
+                            <div class="text-muted small">Total Bookings</div>
+                            <div class="h4 fw-bold mb-0 mt-1">@Model.Bookings.Count</div>
+                            @if (activeBookings > 0)
+                            {
+                                <small class="text-danger fw-semibold">(@activeBookings active)</small>
+                            }
+                            else
+                            {
+                                <small class="text-muted">No active</small>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="border rounded-3 p-3 text-center bg-white h-100 shadow-sm">
+                            <div class="text-muted small">Owned Vehicles</div>
+                            <div class="h4 fw-bold mb-0 mt-1">@ownedVehicles</div>
+                            <small class="text-muted">Fleet listings</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="border rounded-3 p-3 text-center bg-white h-100 shadow-sm">
+                            <div class="text-muted small">Reviews Posted</div>
+                            <div class="h4 fw-bold mb-0 mt-1">@reviewsCount</div>
+                            <small class="text-muted">Ratings &amp; feedback</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Form -->
+                <form asp-action="DeleteUser" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="returnAction" value="Users" />
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                        <a asp-action="Users" class="btn btn-outline-secondary rounded-pill px-4">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </a>
+
+                        @if (canDelete)
+                        {
+                            <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm" onclick="return confirm('Are you completely sure you want to permanently delete this user? This cannot be undone.');">
+                                <i class="bi bi-trash-fill me-1"></i> Permanently Remove User
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-secondary rounded-pill px-4" disabled>
+                                <i class="bi bi-slash-circle me-1"></i> Removal Blocked
+                            </button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

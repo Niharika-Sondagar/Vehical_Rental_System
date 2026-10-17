@@ -1,5 +1,49 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model Vehical_Rental.Models.Vehicle
 @{
+    ViewData["Title"] = $"Delete Vehicle - {Model.FullName}";
 }
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                <i class="bi bi-exclamation-triangle fs-1"></i>
+            </div>
+            <h3 class="fw-bold text-danger mb-2">Delete Vehicle Confirmation</h3>
+            <p class="text-muted small mb-4">
+                Are you sure you want to permanently delete this vehicle from your rental fleet? This action cannot be undone.
+            </p>
+
+            <div class="card border rounded-3 p-3 bg-light text-start mb-4">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" : Model.ImageUrl)" 
+                         alt="@Model.FullName" 
+                         class="rounded-3 me-3 object-fit-cover" 
+                         style="width: 90px; height: 60px;" />
+                    <div>
+                        <h5 class="fw-bold mb-0">@Model.FullName</h5>
+                        <span class="badge bg-secondary">@Model.Category</span>
+                    </div>
+                </div>
+
+                <div class="row g-2 small text-muted">
+                    <div class="col-6"><strong>License Plate:</strong> @Model.LicensePlate</div>
+                    <div class="col-6"><strong>Daily Rate:</strong> ₹@Model.DailyRate.ToString("N2")</div>
+                    <div class="col-6"><strong>Transmission:</strong> @Model.Transmission</div>
+                    <div class="col-6"><strong>Fuel Type:</strong> @Model.FuelType</div>
+                </div>
+            </div>
+
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex justify-content-center gap-3">
+                    <a asp-action="MyVehicles" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-trash me-1"></i> Yes, Delete Vehicle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,5 +1,116 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model IEnumerable<Vehical_Rental.Models.Payment>
 @{
+    ViewData["Title"] = "Payment Management (INR)";
+    var paymentsList = Model.ToList();
+    var totalRevenue = paymentsList.Where(p => p.PaymentStatus == "Completed").Sum(p => p.Amount);
 }
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-credit-card-2-front-fill text-success me-2"></i>Financial &amp; Payment Transactions</h2>
+        <p class="text-muted mb-0">Track all customer payments, transaction IDs, gateways, and settlements in Indian Rupees (₹).</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-speedometer2 me-1"></i> Admin Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-success border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Total Revenue Collected</small>
+            <h2 class="display-6 fw-bold text-success mt-1 mb-0">₹@totalRevenue.ToString("N2")</h2>
+            <small class="text-muted">In Indian Rupees (INR)</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-primary border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Total Transactions</small>
+            <h2 class="display-6 fw-bold text-primary mt-1 mb-0">@paymentsList.Count</h2>
+            <small class="text-muted">Recorded across platform</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-info border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Successful Payments</small>
+            <h2 class="display-6 fw-bold text-info mt-1 mb-0">@paymentsList.Count(p => p.PaymentStatus == "Completed")</h2>
+            <small class="text-muted">100% verified</small>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0">Transaction Register (INR)</h5>
+        <span class="badge bg-light text-dark border">Currency: INR (₹)</span>
+    </div>
+
+    @if (paymentsList.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Tx ID / Date</th>
+                        <th>Booking #</th>
+                        <th>Customer</th>
+                        <th>Vehicle &amp; Owner</th>
+                        <th>Amount (INR)</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in paymentsList.OrderByDescending(x => x.PaymentDate))
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold font-monospace text-dark">@p.TransactionId</span>
+                                <div class="small text-muted">@p.PaymentDate.ToString("MMM dd, yyyy 'at' hh:mm tt")</div>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-primary">#BK-@p.BookingId</span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@(p.Booking?.User?.FullName ?? $"Customer #{p.Booking?.UserId}")</div>
+                                <small class="text-muted">@(p.Booking?.User?.Email ?? "")</small>
+                            </td>
+                            <td>
+                                <div>@(p.Booking?.Vehicle?.FullName ?? $"Car #{p.Booking?.VehicleId}")</div>
+                                <small class="text-muted">Owner: @(p.Booking?.Vehicle?.Owner?.FullName ?? "Host")</small>
+                            </td>
+                            <td class="fw-bold text-success fs-6">₹@p.Amount.ToString("N2")</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-credit-card me-1"></i> @p.PaymentMethod
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @(p.PaymentStatus == "Completed" ? "bg-success" : "bg-warning text-dark") rounded-pill px-3 py-1">
+                                    @p.PaymentStatus
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <a asp-controller="Booking" asp-action="Details" asp-route-id="@p.BookingId" class="btn btn-sm btn-outline-secondary rounded-pill">
+                                    View Receipt
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-credit-card fs-1 d-block mb-3"></i>
+            <h5>No Payment Records Yet</h5>
+            <p class="small">Completed customer payments will appear here.</p>
+        </div>
+    }
+</div>

@@ -1,5 +1,250 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model Vehical_Rental.Models.Booking
+@using System.Security.Claims
 @{
+    ViewData["Title"] = $"Reservation #BK-{Model.Id} Details";
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    bool isRenter = Model.UserId == currentUserId;
+    bool isVehicleOwner = Model.Vehicle?.OwnerId == currentUserId;
+    bool isAdmin = User.IsInRole("Admin");
 }
+
+<nav aria-label="breadcrumb" class="mb-4 d-print-none">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Home</a></li>
+        @if (isVehicleOwner && !isRenter)
+        {
+            <li class="breadcrumb-item"><a asp-controller="Booking" asp-action="Requests" class="text-decoration-none">Fleet Requests</a></li>
+        }
+        else
+        {
+            <li class="breadcrumb-item"><a asp-controller="Booking" asp-action="Index" class="text-decoration-none">Bookings</a></li>
+        }
+        <li class="breadcrumb-item active" aria-current="page">Booking #BK-@Model.Id</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+            <!-- Header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div>
+                    @if (Model.Status == "Confirmed")
+                    {
+                        <span class="badge bg-success fs-6 px-3 py-2 rounded-pill mb-2">
+                            <i class="bi bi-shield-check me-1"></i> Confirmed &amp; Paid
+                        </span>
+                    }
+                    else if (Model.Status == "Accepted")
+                    {
+                        <span class="badge bg-info text-white fs-6 px-3 py-2 rounded-pill mb-2">
+                            <i class="bi bi-check-circle me-1"></i> Owner Approved &bull; Awaiting Payment
+                        </span>
+                    }
+                    else if (Model.Status == "Pending")
+                    {
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill mb-2">
+                            <i class="bi bi-hourglass-split me-1"></i> Pending Owner Approval
+                        </span>
+                    }
+                    else if (Model.Status == "Rejected")
+                    {
+                        <span class="badge bg-danger fs-6 px-3 py-2 rounded-pill mb-2">
+                            <i class="bi bi-x-circle me-1"></i> Request Rejected
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary fs-6 px-3 py-2 rounded-pill mb-2">@Model.Status</span>
+                    }
+                    <h2 class="fw-bold mb-0">Reservation #BK-@Model.Id</h2>
+                    <small class="text-muted">Requested on: @Model.BookingDate.ToString("MMMM dd, yyyy 'at' hh:mm tt")</small>
+                </div>
+                <div class="text-md-end mt-3 mt-md-0 d-print-none">
+                    <button onclick="window.print()" class="btn btn-outline-secondary rounded-pill px-3 me-2">
+                        <i class="bi bi-printer me-1"></i> Print Receipt
+                    </button>
+                    @if (isAdmin)
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning rounded-pill px-3">
+                            <i class="bi bi-pencil me-1"></i> Edit
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Workflow Alert for Customer if Accepted -->
+            @if (Model.Status == "Accepted" && isRenter)
+            {
+                <div class="alert alert-success border-0 rounded-4 p-4 mb-4 shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h5 class="fw-bold text-success mb-1"><i class="bi bi-check-circle-fill me-2"></i>Good News! Your Booking Request is Approved</h5>
+                            <p class="mb-0 text-muted">The vehicle owner has accepted your request. Please complete your payment in Indian Rupees (₹) to confirm your reservation.</p>
+                        </div>
+                        <a asp-controller="Payment" asp-action="Index" asp-route-bookingId="@Model.Id" class="btn btn-success btn-lg rounded-pill px-4 shadow">
+                            <i class="bi bi-credit-card me-2"></i> Pay ₹@Model.TotalPrice.ToString("N0") Now
+                        </a>
+                    </div>
+                </div>
+            }
+
+            <!-- Vehicle Owner Pending Actions -->
+            @if (Model.Status == "Pending" && (isVehicleOwner || isAdmin))
+            {
+                <div class="alert alert-warning border-0 rounded-4 p-4 mb-4 shadow-sm">
+                    <h5 class="fw-bold mb-2"><i class="bi bi-bell-fill text-warning me-2"></i>Owner Action Required</h5>
+                    <p class="text-muted mb-3">This customer wants to rent your vehicle. Please review the rental dates and choose whether to accept or decline.</p>
+                    <div class="d-flex gap-2">
+                        <form asp-action="Accept" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm">
+                                <i class="bi bi-check-lg me-1"></i> Accept Request
+                            </button>
+                        </form>
+                        <form asp-action="Reject" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button type="submit" class="btn btn-outline-danger rounded-pill px-4" onclick="return confirm('Are you sure you want to reject this request?');">
+                                <i class="bi bi-x-lg me-1"></i> Reject Request
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <!-- Vehicle & Customer Cards -->
+            <div class="row g-4 mb-4">
+                <!-- Vehicle Info -->
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 h-100 border">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-car-front text-primary me-2"></i>Rented Vehicle</h6>
+                        <div class="d-flex align-items-center mb-3">
+                            <img src="@(string.IsNullOrEmpty(Model.Vehicle?.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=300&q=80" : Model.Vehicle.ImageUrl)" 
+                                 alt="@Model.Vehicle?.FullName" 
+                                 class="rounded-3 me-3 object-fit-cover" 
+                                 style="width: 80px; height: 55px;" />
+                            <div>
+                                <h6 class="fw-bold mb-0">@(Model.Vehicle?.FullName ?? $"Vehicle #{Model.VehicleId}")</h6>
+                                <span class="badge bg-secondary">@(Model.Vehicle?.Category ?? "Car")</span>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled small mb-0 text-muted">
+                            <li class="mb-1"><strong>License Plate:</strong> <code>@(Model.Vehicle?.LicensePlate ?? "N/A")</code></li>
+                            <li class="mb-1"><strong>Transmission:</strong> @(Model.Vehicle?.Transmission ?? "Automatic")</li>
+                            <li class="mb-1"><strong>Fuel Type:</strong> @(Model.Vehicle?.FuelType ?? "Petrol")</li>
+                            <li class="mb-1"><strong>Daily Rate:</strong> ₹@(Model.Vehicle?.DailyRate.ToString("N2") ?? "0.00") / day</li>
+                            <li><strong>Vehicle Owner:</strong> @(Model.Vehicle?.Owner?.FullName ?? "Fleet Host")</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Customer Info -->
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded-3 h-100 border">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-person-badge text-primary me-2"></i>Renter Information</h6>
+                        <h6 class="fw-bold mb-1">@(Model.User?.FullName ?? $"User #{Model.UserId}")</h6>
+                        <p class="text-muted small mb-2">@(Model.User?.Email ?? "No email provided")</p>
+                        <ul class="list-unstyled small mb-0 text-muted">
+                            <li class="mb-1">
+                                <strong>Phone:</strong> 
+                                @(string.IsNullOrEmpty(Model.User?.PhoneNumber) ? "Not specified" : (Model.User.PhoneNumber.StartsWith("+91") ? Model.User.PhoneNumber : "+91 " + Model.User.PhoneNumber))
+                            </li>
+                            <li class="mb-1"><strong>Address:</strong> @(Model.User?.Address ?? "Not specified")</li>
+                            <li><strong>Account Type:</strong> @(Model.User?.Role ?? "Customer")</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule & Cost Summary -->
+            <div class="card border rounded-3 p-4 bg-light mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-calendar3-range text-primary me-2"></i>Rental Period &amp; Billing (INR)</h5>
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Pickup Date</small>
+                        <strong class="fs-6">@Model.StartDate.ToString("dddd, MMMM dd, yyyy")</strong>
+                    </div>
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Return Date</small>
+                        <strong class="fs-6">@Model.EndDate.ToString("dddd, MMMM dd, yyyy")</strong>
+                    </div>
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Total Duration</small>
+                        <strong class="fs-6">@Model.TotalDays @(Model.TotalDays == 1 ? "Day" : "Days")</strong>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="d-flex justify-content-between mb-2 small text-muted">
+                    <span>Base Rental Calculation (@Model.TotalDays days &times; ₹@(Model.Vehicle?.DailyRate.ToString("N2") ?? "0.00")):</span>
+                    <span>₹@Model.TotalPrice.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 small text-muted">
+                    <span>Standard Insurance &amp; Roadside Support:</span>
+                    <span class="text-success fw-bold">FREE / Included</span>
+                </div>
+                <div class="d-flex justify-content-between fs-4 fw-bold text-dark pt-2 border-top">
+                    <span>Total Amount:</span>
+                    <span class="text-primary">₹@Model.TotalPrice.ToString("N2")</span>
+                </div>
+            </div>
+
+            <!-- Payment Details (if exists) -->
+            @if (Model.Payment != null)
+            {
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <h6 class="fw-bold mb-2 text-success"><i class="bi bi-credit-card me-2"></i>Payment Receipt (INR)</h6>
+                    <div class="row g-2 small text-muted">
+                        <div class="col-sm-3"><strong>Status:</strong> <span class="badge bg-success">@Model.Payment.PaymentStatus</span></div>
+                        <div class="col-sm-3"><strong>Method:</strong> @Model.Payment.PaymentMethod</div>
+                        <div class="col-sm-3"><strong>Amount Paid:</strong> <strong class="text-dark">₹@Model.Payment.Amount.ToString("N2")</strong></div>
+                        <div class="col-sm-3"><strong>Tx ID:</strong> <code>@Model.Payment.TransactionId</code></div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Notes))
+            {
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <h6 class="fw-bold mb-1"><i class="bi bi-card-text text-secondary me-2"></i>Special Requests / Notes</h6>
+                    <p class="text-muted small mb-0">@Model.Notes</p>
+                </div>
+            }
+
+            <!-- Bottom Actions -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top d-print-none">
+                @if (isVehicleOwner && !isRenter)
+                {
+                    <a asp-action="Requests" class="btn btn-outline-secondary rounded-pill px-4">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Fleet Requests
+                    </a>
+                }
+                else
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Bookings
+                    </a>
+                }
+
+                <div class="d-flex gap-2">
+                    @if (Model.Status == "Accepted" && isRenter)
+                    {
+                        <a asp-controller="Payment" asp-action="Index" asp-route-bookingId="@Model.Id" class="btn btn-success rounded-pill px-4 shadow-sm">
+                            <i class="bi bi-credit-card me-1"></i> Proceed to Payment
+                        </a>
+                    }
+
+                    @if (Model.Status == "Pending" && (isRenter || isAdmin))
+                    {
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger rounded-pill px-4">
+                            <i class="bi bi-x-circle me-1"></i> Cancel Request
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

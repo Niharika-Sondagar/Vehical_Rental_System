@@ -1,5 +1,143 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@inject Vehical_Rental.Services.Interfaces.IUserService UserService
+@using System.Security.Claims
 @{
+    ViewData["Title"] = "Admin - User Directory & Protection";
+    var users = (await UserService.GetAllAsync()).ToList();
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 }
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">User Directory &amp; Security Status</h2>
+        <p class="text-muted mb-0">Oversee customer accounts, vehicle owners, administrators, and manage security suspensions.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Protection" class="btn btn-outline-danger rounded-pill px-3">
+            <i class="bi bi-shield-check me-1"></i> Protection Center
+        </a>
+        <a asp-controller="User" asp-action="Create" class="btn btn-primary rounded-pill px-4">
+            <i class="bi bi-person-plus me-1"></i> Add User
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4">User</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Fleet / Activity</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Protection &amp; Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in users)
+                {
+                    var isLocked = await UserService.IsLockedOutAsync(user);
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">@user.FullName</div>
+                                    <small class="text-muted">Member since @user.CreatedAt.ToString("MMM yyyy")</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>@user.Email</td>
+                        <td>@(string.IsNullOrEmpty(user.PhoneNumber) ? "—" : user.PhoneNumber)</td>
+                        <td>
+                            @if (user.Role == "Admin")
+                            {
+                                <span class="badge bg-warning text-dark rounded-pill px-3 py-1">Administrator</span>
+                            }
+                            else if (user.Role == "VehicleOwner")
+                            {
+                                <span class="badge bg-info text-white rounded-pill px-3 py-1">Vehicle Owner</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-primary rounded-pill px-3 py-1">Customer</span>
+                            }
+                        </td>
+                        <td>
+                            @if (user.Role == "VehicleOwner")
+                            {
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-car-front me-1"></i> @user.OwnedVehicles.Count Vehicles
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-secondary border">
+                                    <i class="bi bi-calendar-check me-1"></i> @user.Bookings.Count Bookings
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (isLocked)
+                            {
+                                <span class="badge bg-danger rounded-pill px-3 py-1">
+                                    <i class="bi bi-lock-fill me-1"></i> Suspended
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success rounded-pill px-3 py-1">
+                                    <i class="bi bi-check-circle me-1"></i> Active
+                                </span>
+                            }
+                        </td>
+                        <td class="text-end pe-4">
+                            @if (user.Role != "Admin")
+                            {
+                                <form asp-action="ToggleUserLockout" method="post" class="d-inline me-1">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@user.Id" />
+                                    <input type="hidden" name="returnAction" value="Users" />
+                                    @if (isLocked)
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-2" title="Restore User Account">
+                                            <i class="bi bi-unlock"></i> Restore
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2" title="Suspend User for Protection" onclick="return confirm('Suspend this user account?');">
+                                            <i class="bi bi-slash-circle"></i> Suspend
+                                        </button>
+                                    }
+                                </form>
+                            }
+                            <a asp-controller="User" asp-action="Details" asp-route-id="@user.Id" class="btn btn-sm btn-outline-secondary rounded-pill me-1" title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a asp-controller="User" asp-action="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-outline-warning rounded-pill me-1" title="Edit Profile">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            @if (user.Id == currentUserId)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" disabled title="You cannot remove your own administrator account">
+                                    <i class="bi bi-person-check"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <a asp-action="DeleteUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-danger rounded-pill" title="Remove User From System">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

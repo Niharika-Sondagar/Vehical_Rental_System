@@ -1,5 +1,238 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model Vehical_Rental.Models.Vehicle
 @{
+    ViewData["Title"] = $"Edit {Model.FullName}";
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div class="bg-warning text-dark rounded-circle p-3 me-3 d-inline-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    <i class="bi bi-pencil-square fs-3"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0">Edit Vehicle Specifications</h3>
+                    <small class="text-muted">Update fleet details for @Model.FullName</small>
+                </div>
+            </div>
+
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small shadow-sm rounded-3"></div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="Make" class="form-label">Make / Brand</label>
+                        <input asp-for="Make" class="form-control" required />
+                        <span asp-validation-for="Make" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Model" class="form-label">Model Name</label>
+                        <input asp-for="Model" class="form-control" required />
+                        <span asp-validation-for="Model" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label asp-for="Year" class="form-label">Year</label>
+                        <input asp-for="Year" type="number" class="form-control" min="1990" max="2030" required />
+                        <span asp-validation-for="Year" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="LicensePlate" class="form-label">License Plate #</label>
+                        <input asp-for="LicensePlate" class="form-control" required />
+                        <span asp-validation-for="LicensePlate" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Category" class="form-label">Category</label>
+                        <select asp-for="Category" class="form-select" required>
+                            <option value="Sedan">Sedan</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Luxury">Luxury</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Van">Van / Minivan</option>
+                        </select>
+                        <span asp-validation-for="Category" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label asp-for="DailyRate" class="form-label">Daily Rate (INR ₹)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input asp-for="DailyRate" type="number" step="0.01" class="form-control" required />
+                        </div>
+                        <span asp-validation-for="DailyRate" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Transmission" class="form-label">Transmission</label>
+                        <select asp-for="Transmission" class="form-select" required>
+                            <option value="Automatic">Automatic</option>
+                            <option value="Manual">Manual</option>
+                        </select>
+                        <span asp-validation-for="Transmission" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="FuelType" class="form-label">Fuel Type</label>
+                        <select asp-for="FuelType" class="form-select" required>
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                        <span asp-validation-for="FuelType" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <label asp-for="Seats" class="form-label">Seats</label>
+                        <input asp-for="Seats" type="number" class="form-control" min="1" max="20" required />
+                        <span asp-validation-for="Seats" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ImageUrl" class="form-label">Image URL</label>
+                    <input asp-for="ImageUrl" id="imageUrlInput" class="form-control" oninput="updateImagePreview()" />
+                    <span asp-validation-for="ImageUrl" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Current Photo Preview</label>
+                    <div class="image-preview-container">
+                        <img id="previewImg" src="@Model.ImageUrl" alt="Vehicle Preview" style="@(string.IsNullOrEmpty(Model.ImageUrl) ? "display:none;" : "")" />
+                        <span class="text-muted small" id="previewPlaceholder" style="@(!string.IsNullOrEmpty(Model.ImageUrl) ? "display:none;" : "")">No image provided</span>
+                    </div>
+                </div>
+
+                <!-- OpenStreetMap Vehicle Location Picker -->
+                <div class="card border-0 bg-light p-3 rounded-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold mb-0">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Vehicle Location (OpenStreetMap)
+                        </label>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="detectPickerLocation()">
+                            <i class="bi bi-crosshair me-1"></i> Current Location
+                        </button>
+                    </div>
+                    <small class="text-muted mb-3 d-block">Position where this vehicle will be parked / picked up so customers can find it on the map.</small>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label asp-for="Latitude" class="form-label small">Latitude</label>
+                            <input asp-for="Latitude" id="vehicleLat" class="form-control" type="number" step="0.000001" required />
+                            <span asp-validation-for="Latitude" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Longitude" class="form-label small">Longitude</label>
+                            <input asp-for="Longitude" id="vehicleLon" class="form-control" type="number" step="0.000001" required />
+                            <span asp-validation-for="Longitude" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="input-group mb-2">
+                        <input type="text" id="pickerSearchInput" class="form-control" placeholder="Search address or city via OpenStreetMap..." />
+                        <button type="button" class="btn btn-secondary" onclick="searchPickerAddress()">
+                            <i class="bi bi-search me-1"></i> Locate
+                        </button>
+                    </div>
+                    <div id="locationPickerMap" style="height: 220px; width: 100%; border-radius: 12px;" class="border"></div>
+                    <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle me-1"></i> Click on the map or drag the pin to place the vehicle.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Description" class="form-label">Description</label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Description" class="text-danger small"></span>
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                    <input asp-for="IsAvailable" class="form-check-input" type="checkbox" id="isAvailableSwitch" />
+                    <label class="form-check-label fw-semibold" for="isAvailableSwitch">
+                        Vehicle is Available for Rent
+                    </label>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a asp-action="MyVehicles" class="btn btn-outline-secondary px-4 rounded-pill">Cancel</a>
+                    <button type="submit" class="btn btn-warning px-5 rounded-pill shadow-sm">
+                        <i class="bi bi-save me-1"></i> Update Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        function updateImagePreview() {
+            var url = document.getElementById("imageUrlInput").value;
+            var img = document.getElementById("previewImg");
+            var placeholder = document.getElementById("previewPlaceholder");
+
+            if (url && url.trim().length > 5) {
+                img.src = url;
+                img.style.display = "block";
+                placeholder.style.display = "none";
+            } else {
+                img.style.display = "none";
+                placeholder.style.display = "block";
+            }
+        }
+
+        let pickerMap, pickerMarker;
+        function initPickerMap() {
+            let lat = parseFloat(document.getElementById("vehicleLat").value) || 37.7749;
+            let lon = parseFloat(document.getElementById("vehicleLon").value) || -122.4194;
+            pickerMap = L.map('locationPickerMap').setView([lat, lon], 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(pickerMap);
+            pickerMarker = L.marker([lat, lon], { draggable: true }).addTo(pickerMap);
+            pickerMarker.on('dragend', function(e) {
+                let pos = e.target.getLatLng();
+                document.getElementById("vehicleLat").value = pos.lat.toFixed(6);
+                document.getElementById("vehicleLon").value = pos.lng.toFixed(6);
+            });
+            pickerMap.on('click', function(e) {
+                pickerMarker.setLatLng(e.latlng);
+                document.getElementById("vehicleLat").value = e.latlng.lat.toFixed(6);
+                document.getElementById("vehicleLon").value = e.latlng.lng.toFixed(6);
+            });
+        }
+        async function searchPickerAddress() {
+            let q = document.getElementById("pickerSearchInput").value;
+            if (!q) return;
+            let res = await fetch('/Vehicle/SearchLocation?query=' + encodeURIComponent(q));
+            if (res.ok) {
+                let data = await res.json();
+                if (data && data.length > 0) {
+                    let lat = parseFloat(data[0].lat);
+                    let lon = parseFloat(data[0].lon);
+                    pickerMap.setView([lat, lon], 14);
+                    pickerMarker.setLatLng([lat, lon]);
+                    document.getElementById("vehicleLat").value = lat.toFixed(6);
+                    document.getElementById("vehicleLon").value = lon.toFixed(6);
+                }
+            }
+        }
+        function detectPickerLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    let lat = pos.coords.latitude;
+                    let lon = pos.coords.longitude;
+                    pickerMap.setView([lat, lon], 14);
+                    pickerMarker.setLatLng([lat, lon]);
+                    document.getElementById("vehicleLat").value = lat.toFixed(6);
+                    document.getElementById("vehicleLon").value = lon.toFixed(6);
+                });
+            }
+        }
+        document.addEventListener("DOMContentLoaded", initPickerMap);
+    </script>
 }

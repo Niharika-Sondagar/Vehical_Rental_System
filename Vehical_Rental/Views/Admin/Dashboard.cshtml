@@ -1,5 +1,245 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@inject Vehical_Rental.Services.Interfaces.IBookingService BookingService
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
+@inject Vehical_Rental.Services.Interfaces.IUserService UserService
+@inject Vehical_Rental.Services.Interfaces.IReviewService ReviewService
 @{
+    ViewData["Title"] = "System Analytics & Performance Analysis";
+    var vehicles = (await VehicleService.GetAllAsync()).ToList();
+    var bookings = (await BookingService.GetAllAsync()).ToList();
+    var users = (await UserService.GetAllAsync()).ToList();
+    var reviews = (await ReviewService.GetAllAsync()).ToList();
+
+    var customers = users.Where(u => u.Role == "Customer").ToList();
+    var owners = users.Where(u => u.Role == "VehicleOwner").ToList();
+
+    var totalRevenue = bookings.Where(b => b.Status == "Confirmed" || b.Status == "Completed").Sum(b => b.TotalPrice);
+    var completedCount = bookings.Count(b => b.Status == "Completed");
+    var confirmedCount = bookings.Count(b => b.Status == "Confirmed");
+    var pendingCount = bookings.Count(b => b.Status == "Pending");
+    var cancelledCount = bookings.Count(b => b.Status == "Cancelled");
+    var totalRentals = bookings.Count;
+    var conversionRate = totalRentals > 0 ? Math.Round((double)(completedCount + confirmedCount) / totalRentals * 100, 1) : 0;
+    var avgDailyRate = vehicles.Any() ? Math.Round(vehicles.Average(v => v.DailyRate), 2) : 0m;
 }
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-graph-up-arrow text-primary me-2"></i>System Analytics &amp; Deep Telemetry</h2>
+        <p class="text-muted mb-0">In-depth analysis of platform performance, fleet utilization, owner participation, and booking conversion.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-speedometer2 me-1"></i> Executive View
+        </a>
+        <a asp-action="Protection" class="btn btn-outline-danger rounded-pill px-3">
+            <i class="bi bi-shield-check me-1"></i> Protection Center
+        </a>
+        <a asp-action="Reports" class="btn btn-outline-primary rounded-pill px-3">
+            <i class="bi bi-printer me-1"></i> Export Report
+        </a>
+    </div>
+</div>
+
+<!-- Primary Financial & Operational Metrics -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-primary border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Platform Rental Revenue</small>
+            <h2 class="display-6 fw-bold text-primary mt-1 mb-0">₹@totalRevenue.ToString("N2")</h2>
+            <small class="text-success"><i class="bi bi-arrow-up-right me-1"></i> Confirmed &amp; Completed</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-success border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Fleet Utilization</small>
+            <h2 class="display-6 fw-bold text-success mt-1 mb-0">
+                @(vehicles.Any() ? Math.Round((double)vehicles.Count(v => !v.IsAvailable) / vehicles.Count * 100, 1) : 0)%
+            </h2>
+            <small class="text-muted">@vehicles.Count(v => !v.IsAvailable) of @vehicles.Count on road</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-warning border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Booking Conversion</small>
+            <h2 class="display-6 fw-bold text-warning mt-1 mb-0">@conversionRate%</h2>
+            <small class="text-muted">@(confirmedCount + completedCount) of @totalRentals succeeded</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-info border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Avg. Daily Fleet Rate</small>
+            <h2 class="display-6 fw-bold text-info mt-1 mb-0">₹@avgDailyRate.ToString("N2")</h2>
+            <small class="text-muted">Across all @vehicles.Count vehicles</small>
+        </div>
+    </div>
+</div>
+
+<!-- Ecosystem & Role Breakdown Analytics -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-people text-primary me-2"></i>User Demographics &amp; Roles</h5>
+            <div class="row g-3">
+                <div class="col-sm-4">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Customers</small>
+                        <h3 class="fw-bold text-primary mb-0">@customers.Count</h3>
+                        <small class="text-muted">Active Renters</small>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Vehicle Owners</small>
+                        <h3 class="fw-bold text-warning mb-0">@owners.Count</h3>
+                        <small class="text-muted">Fleet Hosts</small>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Fleet Ratio</small>
+                        <h3 class="fw-bold text-success mb-0">
+                            @(owners.Any() ? Math.Round((double)vehicles.Count / owners.Count, 1) : 0)
+                        </h3>
+                        <small class="text-muted">Cars / Owner</small>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-top small text-muted">
+                <i class="bi bi-check2-circle text-success me-1"></i> All vehicles in the system are registered and maintained directly by registered Vehicle Owners.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart text-primary me-2"></i>Booking Status Distribution</h5>
+            <div class="row g-3">
+                <div class="col-6 col-sm-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Completed</small>
+                        <h4 class="fw-bold text-primary mb-0">@completedCount</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Confirmed</small>
+                        <h4 class="fw-bold text-success mb-0">@confirmedCount</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Pending</small>
+                        <h4 class="fw-bold text-warning mb-0">@pendingCount</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-3 bg-light rounded-3 text-center border">
+                        <small class="text-muted d-block mb-1">Cancelled</small>
+                        <h4 class="fw-bold text-danger mb-0">@cancelledCount</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-top small text-muted d-flex justify-content-between">
+                <span>Customer Reviews: <strong>@reviews.Count</strong></span>
+                <span>Average Satisfaction: <strong>@(reviews.Any() ? Math.Round(reviews.Average(r => r.Rating), 1) : 5.0) / 5.0 ★</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fleet by Category Breakdown -->
+<div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+    <h5 class="fw-bold mb-3"><i class="bi bi-tags text-primary me-2"></i>Fleet Category Distribution</h5>
+    <div class="row g-3">
+        @foreach (var cat in new[] { "Sedan", "SUV", "Luxury", "Sports", "Electric", "Van" })
+        {
+            var count = vehicles.Count(v => v.Category.Equals(cat, StringComparison.OrdinalIgnoreCase));
+            var availableInCat = vehicles.Count(v => v.Category.Equals(cat, StringComparison.OrdinalIgnoreCase) && v.IsAvailable);
+            <div class="col-sm-4 col-md-2">
+                <div class="p-3 bg-light rounded-3 text-center border">
+                    <h6 class="fw-bold mb-1">@cat</h6>
+                    <span class="fs-4 fw-bold text-primary">@count</span>
+                    <small class="text-muted d-block">@availableInCat Avail</small>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Vehicle Owners Telemetry Table -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+    <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold mb-0">Vehicle Owner Analysis</h5>
+            <small class="text-muted">Breakdown of hosts supplying inventory to the rental platform</small>
+        </div>
+        <a asp-action="Users" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+            Manage Owners
+        </a>
+    </div>
+
+    @if (owners.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Vehicle Owner</th>
+                        <th>Email &amp; Contact</th>
+                        <th>Fleet Size</th>
+                        <th>Member Since</th>
+                        <th>Available Cars</th>
+                        <th class="text-end pe-4">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var owner in owners)
+                    {
+                        var ownerCars = vehicles.Where(v => v.OwnerId == owner.Id).ToList();
+                        var ownerAvail = ownerCars.Count(c => c.IsAvailable);
+                        var isLocked = await UserService.IsLockedOutAsync(owner);
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-warning bg-opacity-10 text-dark rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="bi bi-key-fill text-warning"></i>
+                                    </div>
+                                    <div class="fw-bold">@owner.FullName</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>@owner.Email</div>
+                                <small class="text-muted">@(owner.PhoneNumber ?? "No phone")</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary rounded-pill px-3 py-1">@ownerCars.Count Vehicles</span>
+                            </td>
+                            <td class="small text-muted">@owner.CreatedAt.ToString("MMM dd, yyyy")</td>
+                            <td>
+                                <span class="badge @(ownerAvail > 0 ? "bg-success" : "bg-secondary") rounded-pill px-3 py-1">
+                                    @ownerAvail / @ownerCars.Count Available
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                @if (isLocked)
+                                {
+                                    <span class="badge bg-danger rounded-pill px-3 py-1">Suspended</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success rounded-pill px-3 py-1">Active Host</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="p-4 text-center text-muted">
+            No registered vehicle owners yet.
+        </div>
+    }
+</div>

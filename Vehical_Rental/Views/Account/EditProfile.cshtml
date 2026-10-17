@@ -1,0 +1,96 @@
+@model Vehical_Rental.Models.EditProfileViewModel
+@{
+    ViewData["Title"] = "Edit My Profile";
+}
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Account" asp-action="Profile" class="text-decoration-none">My Profile</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Edit Profile</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-7 col-md-9">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div class="bg-primary text-white rounded-circle p-3 me-3 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 52px; height: 52px;">
+                    <i class="bi bi-person-gear fs-3"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0">Edit Profile</h3>
+                    <small class="text-muted">Update your contact information and personal details</small>
+                </div>
+            </div>
+
+            <form asp-action="EditProfile" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small shadow-sm rounded-3"></div>
+
+                <!-- Account Role Badge -->
+                <div class="p-3 bg-light rounded-3 mb-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted d-block">Account Type</small>
+                        <span class="badge @(Model.Role == "Admin" ? "bg-warning text-dark" : Model.Role == "VehicleOwner" ? "bg-info text-white" : "bg-primary") px-3 py-2 rounded-pill">
+                            <i class="bi bi-shield-check me-1"></i> @Model.Role
+                        </span>
+                    </div>
+                    <small class="text-muted">Account role managed by system</small>
+                </div>
+
+                <!-- Email (Read-Only) -->
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label">Email Address (Login ID)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="Email" class="form-control bg-light" readonly />
+                    </div>
+                    <small class="text-muted" style="font-size: 0.78rem;">Email address is your primary login identifier.</small>
+                </div>
+
+                <!-- Full Name -->
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label">Full Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-person"></i></span>
+                        <input asp-for="FullName" class="form-control" placeholder="Your full name" required />
+                    </div>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <!-- Indian Phone Number -->
+                <div class="mb-3">
+                    <label asp-for="PhoneNumber" class="form-label">Mobile Number (India)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted fw-semibold"><i class="bi bi-telephone me-1"></i> +91</span>
+                        <input asp-for="PhoneNumber" class="form-control" placeholder="9876543210" maxlength="10" required />
+                    </div>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                    <small class="text-muted" style="font-size: 0.78rem;">Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.</small>
+                </div>
+
+                <!-- Address -->
+                <div class="mb-4">
+                    <label asp-for="Address" class="form-label">Address / Location</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-geo-alt"></i></span>
+                        <input asp-for="Address" class="form-control" placeholder="City, State" />
+                    </div>
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a asp-action="Profile" class="btn btn-outline-secondary px-4 rounded-pill">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,43 @@
+@model Vehical_Rental.Models.Review
+@{
+    ViewData["Title"] = "Delete Review";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                <i class="bi bi-trash fs-1"></i>
+            </div>
+            <h3 class="fw-bold text-danger mb-2">Delete Review</h3>
+            <p class="text-muted small mb-4">
+                Are you sure you want to permanently delete this customer review?
+            </p>
+
+            <div class="card border rounded-3 p-3 bg-light text-start mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold">@(Model.Vehicle?.FullName ?? $"Vehicle #{Model.VehicleId}")</span>
+                    <span class="text-warning">
+                        @for (int i = 0; i < Model.Rating; i++)
+                        {
+                            <i class="bi bi-star-fill"></i>
+                        }
+                    </span>
+                </div>
+                <p class="small text-muted mb-1">"@Model.Comment"</p>
+                <small class="text-muted">By @(Model.User?.FullName ?? $"User #{Model.UserId}") on @Model.ReviewDate.ToString("MMM dd, yyyy")</small>
+            </div>
+
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex justify-content-center gap-3">
+                    <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-trash me-1"></i> Yes, Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

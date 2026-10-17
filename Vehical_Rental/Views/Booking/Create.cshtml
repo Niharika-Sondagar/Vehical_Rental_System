@@ -1,5 +1,245 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model Vehical_Rental.Models.Booking
+@using System.Security.Claims
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
+@inject Vehical_Rental.Services.Interfaces.IUserService UserService
 @{
+    ViewData["Title"] = "Request Vehicle Reservation";
+    var allVehicles = (await VehicleService.GetAllAsync()).Where(v => v.IsAvailable).ToList();
+    var users = await UserService.GetAllAsync();
+
+    var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    bool isOwner = User.IsInRole("VehicleOwner");
+
+    int selectedVehicleId = (Model != null && Model.VehicleId > 0) ? Model.VehicleId : 0;
+    if (selectedVehicleId == 0 && int.TryParse(Context.Request.Query["vehicleId"], out int qvId))
+    {
+        selectedVehicleId = qvId;
+    }
+
+    var selectedVehicle = selectedVehicleId > 0 ? (await VehicleService.GetByIdAsync(selectedVehicleId)) : null;
+    bool isOwnVehicle = selectedVehicle != null && !string.IsNullOrEmpty(selectedVehicle.OwnerId) && selectedVehicle.OwnerId == currentUserId;
+
+    // Filter out own vehicles from dropdown for vehicle owners
+    var vehicles = (!string.IsNullOrEmpty(currentUserId) && !User.IsInRole("Admin"))
+        ? allVehicles.Where(v => v.OwnerId != currentUserId).ToList()
+        : allVehicles;
+
+    DateTime startDate = (Model != null && Model.StartDate >= DateTime.Today)
+        ? Model.StartDate.Date
+        : (DateTime.TryParse(Context.Request.Query["startDate"].ToString(), out DateTime qs) && qs >= DateTime.Today ? qs.Date : DateTime.Today);
+
+    DateTime endDate = (Model != null && Model.EndDate > startDate)
+        ? Model.EndDate.Date
+        : (DateTime.TryParse(Context.Request.Query["endDate"].ToString(), out DateTime qe) && qe > startDate ? qe.Date : startDate.AddDays(3));
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div class="bg-primary text-white rounded-circle p-3 me-3 d-inline-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    <i class="bi bi-calendar-check fs-3"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0">Request a Vehicle Reservation</h3>
+                    <small class="text-muted">Choose your rental dates and submit a booking request to the vehicle owner</small>
+                </div>
+            </div>
+
+            @if (isOwnVehicle)
+            {
+                <div class="alert alert-warning rounded-4 p-4 text-center">
+                    <i class="bi bi-exclamation-triangle-fill fs-2 text-warning d-block mb-2"></i>
+                    <h5 class="fw-bold">You Cannot Rent Your Own Vehicle</h5>
+                    <p class="text-muted mb-3">
+                        Vehicle Owners cannot book vehicles that belong to their own fleet. However, you can freely rent any other vehicle listed on RentDrive!
+                    </p>
+                    <a asp-controller="Vehicle" asp-action="Index" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-grid me-1"></i> Browse Other Fleet Vehicles
+                    </a>
+                </div>
+            }
+            else
+            {
+                <form asp-action="Create" method="post" id="bookingForm">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small shadow-sm rounded-3"></div>
+
+                    <!-- Workflow Info Banner -->
+                    <div class="alert alert-info border-0 rounded-3 p-3 mb-4 d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill fs-4 text-primary me-3 flex-shrink-0"></i>
+                        <small class="text-muted">
+                            <strong>How it works:</strong> Your booking request is submitted as <span class="badge bg-warning text-dark">Pending</span>. The vehicle owner reviews and accepts your request. Once accepted, you can securely complete your payment in Indian Rupees (₹) to confirm the reservation.
+                        </small>
+                    </div>
+
+                    <!-- User Selection -->
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <div class="mb-3">
+                            <label asp-for="UserId" class="form-label">Customer Account</label>
+                            <select asp-for="UserId" class="form-select" required>
+                                <option value="">-- Select Customer Account --</option>
+                                @foreach (var u in users.Where(u => u.Role == "Customer"))
+                                {
+                                    <option value="@u.Id" selected="@(u.Id == currentUserId ? "selected" : null)">@u.FullName (@u.Email)</option>
+                                }
+                            </select>
+                            <span asp-validation-for="UserId" class="text-danger small"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="UserId" value="@currentUserId" />
+                        <div class="p-3 bg-light rounded-3 mb-3 d-flex align-items-center">
+                            <i class="bi bi-person-circle fs-4 text-primary me-2"></i>
+                            <div>
+                                <small class="text-muted d-block">Booking as:</small>
+                                <strong>@User.Identity?.Name (@User.FindFirst(ClaimTypes.Email)?.Value)</strong>
+                                @if (isOwner)
+                                {
+                                    <span class="badge bg-info text-white ms-2" style="font-size: 0.75rem;">
+                                        <i class="bi bi-key-fill me-1"></i> Vehicle Owner (Renting as Customer)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Vehicle Selection -->
+                    <div class="mb-3">
+                        <label asp-for="VehicleId" class="form-label">Select Vehicle</label>
+                        <select asp-for="VehicleId" id="vehicleSelect" class="form-select" required onchange="onVehicleChange()">
+                            <option value="">-- Choose a Vehicle from Fleet --</option>
+                            @foreach (var v in vehicles)
+                            {
+                                <option value="@v.Id" data-rate="@v.DailyRate" data-name="@v.FullName" data-img="@v.ImageUrl" selected="@(v.Id == selectedVehicleId ? "selected" : null)">
+                                    @v.FullName (@v.Category - ₹@v.DailyRate.ToString("N0")/day)
+                                </option>
+                            }
+                        </select>
+                        <span asp-validation-for="VehicleId" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Dates Selection -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="StartDate" class="form-label">Pickup Date</label>
+                            <input asp-for="StartDate" type="date" id="bookingStartDate" class="form-control" 
+                                   value="@startDate.ToString("yyyy-MM-dd")" 
+                                   min="@DateTime.Today.ToString("yyyy-MM-dd")" required onchange="calculateBooking()" />
+                            <span asp-validation-for="StartDate" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="EndDate" class="form-label">Return Date</label>
+                            <input asp-for="EndDate" type="date" id="bookingEndDate" class="form-control" 
+                                   value="@endDate.ToString("yyyy-MM-dd")" 
+                                   min="@DateTime.Today.AddDays(1).ToString("yyyy-MM-dd")" required onchange="calculateBooking()" />
+                            <span asp-validation-for="EndDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Price Summary Card -->
+                    <div class="card border rounded-3 p-3 bg-light mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-receipt me-1"></i> Estimated Rental Cost (INR)</h6>
+                        <div class="d-flex justify-content-between mb-2 small text-muted">
+                            <span>Selected Vehicle:</span>
+                            <strong id="summaryCarName" class="text-dark">Select a vehicle</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small text-muted">
+                            <span>Rental Duration:</span>
+                            <span id="summaryDays" class="fw-bold">0 Days</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small text-muted">
+                            <span>Daily Rate:</span>
+                            <span id="summaryDailyRate">₹0.00 / day</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold fs-5">Estimated Total:</span>
+                            <span class="display-6 fw-bold text-primary" id="summaryTotal">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Hidden inputs for TotalPrice and Status -->
+                    <input type="hidden" asp-for="TotalPrice" id="hiddenTotalPrice" value="0" />
+                    <input type="hidden" asp-for="Status" value="Pending" />
+
+                    <!-- Special Notes -->
+                    <div class="mb-4">
+                        <label asp-for="Notes" class="form-label">Special Requests / Notes (Optional)</label>
+                        <textarea asp-for="Notes" class="form-control" rows="2" placeholder="e.g. Flight arrival details, child safety seat requirement, requested pickup point..."></textarea>
+                        <span asp-validation-for="Notes" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary px-4 rounded-pill">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5 rounded-pill shadow-sm">
+                            <i class="bi bi-send-check me-1"></i> Send Booking Request
+                        </button>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function onVehicleChange() {
+            calculateBooking();
+        }
+
+        function calculateBooking() {
+            var select = document.getElementById("vehicleSelect");
+            if (!select) return;
+
+            var selectedOption = select.options[select.selectedIndex];
+            var dailyRate = 0;
+            var carName = "Select a vehicle";
+
+            if (selectedOption && selectedOption.value) {
+                dailyRate = parseFloat(selectedOption.getAttribute("data-rate")) || 0;
+                carName = selectedOption.getAttribute("data-name") || "";
+            }
+
+            var startInput = document.getElementById("bookingStartDate").value;
+            var endInput = document.getElementById("bookingEndDate").value;
+
+            var diffDays = 1;
+            if (startInput && endInput) {
+                var start = new Date(startInput);
+                var end = new Date(endInput);
+                var diffTime = end.getTime() - start.getTime();
+                diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+                if (diffDays <= 0) diffDays = 1;
+            }
+
+            var total = (diffDays * dailyRate).toFixed(2);
+
+            document.getElementById("summaryCarName").innerText = carName;
+            document.getElementById("summaryDays").innerText = diffDays + (diffDays === 1 ? " Day" : " Days");
+            document.getElementById("summaryDailyRate").innerText = "₹" + dailyRate.toLocaleString('en-IN') + " / day";
+            document.getElementById("summaryTotal").innerText = "₹" + parseFloat(total).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            document.getElementById("hiddenTotalPrice").value = total;
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            calculateBooking();
+
+            var form = document.getElementById("bookingForm");
+            if (form) {
+                form.addEventListener("submit", function () {
+                    var btn = form.querySelector('button[type="submit"]');
+                    if (btn && form.checkValidity()) {
+                        setTimeout(function () {
+                            btn.disabled = true;
+                            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing Request...';
+                        }, 50);
+                    }
+                });
+            }
+        });
+    </script>
 }

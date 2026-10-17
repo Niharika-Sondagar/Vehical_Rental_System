@@ -1,0 +1,85 @@
+@model Vehical_Rental.Models.ApplicationUser
+@{
+    ViewData["Title"] = $"Delete User - {Model.FullName}";
+    bool isSelf = ViewBag.IsSelf ?? false;
+    bool isLastAdmin = ViewBag.IsLastAdmin ?? false;
+    int activeBookings = ViewBag.ActiveBookingsCount ?? 0;
+    int ownedVehicles = ViewBag.OwnedVehiclesCount ?? 0;
+    int reviewsCount = ViewBag.ReviewsCount ?? 0;
+    bool canDelete = !isSelf && !isLastAdmin;
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-7">
+        <div class="mb-3">
+            <a asp-controller="Admin" asp-action="Users" class="text-decoration-none text-muted small">
+                <i class="bi bi-arrow-left me-1"></i> Back to User Directory
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                <i class="bi bi-person-x fs-1"></i>
+            </div>
+            <h3 class="fw-bold text-danger mb-2">Delete User Account</h3>
+            <p class="text-muted small mb-4">
+                Are you sure you want to permanently delete user <strong>@Model.FullName</strong> from the system?
+            </p>
+
+            @if (isSelf)
+            {
+                <div class="alert alert-danger border-0 rounded-3 text-start small mb-4">
+                    <i class="bi bi-shield-slash-fill me-1"></i>
+                    <strong>Action Forbidden:</strong> You cannot delete your own administrator account while logged in.
+                </div>
+            }
+            else if (isLastAdmin)
+            {
+                <div class="alert alert-danger border-0 rounded-3 text-start small mb-4">
+                    <i class="bi bi-shield-exclamation me-1"></i>
+                    <strong>Action Forbidden:</strong> This user is the sole administrator in the system.
+                </div>
+            }
+
+            <div class="card border rounded-3 p-3 bg-light text-start mb-4">
+                <div class="small text-muted mb-1"><strong>Full Name:</strong> @Model.FullName</div>
+                <div class="small text-muted mb-1"><strong>Email:</strong> @Model.Email</div>
+                <div class="small text-muted mb-1"><strong>Phone:</strong> @(string.IsNullOrEmpty(Model.PhoneNumber) ? "—" : Model.PhoneNumber)</div>
+                <div class="small text-muted mb-1"><strong>Role:</strong> <span class="badge bg-primary">@Model.Role</span></div>
+                <div class="small text-muted mb-2"><strong>Joined:</strong> @Model.CreatedAt.ToString("MMM dd, yyyy")</div>
+                <hr class="my-2" />
+                <div class="row g-2 small text-muted text-center pt-1">
+                    <div class="col-4">
+                        <strong class="d-block text-dark">@Model.Bookings.Count</strong> Bookings
+                    </div>
+                    <div class="col-4">
+                        <strong class="d-block text-dark">@ownedVehicles</strong> Vehicles
+                    </div>
+                    <div class="col-4">
+                        <strong class="d-block text-dark">@reviewsCount</strong> Reviews
+                    </div>
+                </div>
+            </div>
+
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex justify-content-center gap-3">
+                    <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                    @if (canDelete)
+                    {
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm" onclick="return confirm('Confirm permanent removal of this user?');">
+                            <i class="bi bi-trash me-1"></i> Yes, Delete User
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" disabled>
+                            <i class="bi bi-slash-circle me-1"></i> Deletion Blocked
+                        </button>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

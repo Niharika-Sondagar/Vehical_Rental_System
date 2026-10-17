@@ -1,0 +1,354 @@
+@{
+    ViewData["Title"] = "Nearby Vehicles - OpenStreetMap Search";
+}
+
+<!-- Leaflet CSS for OpenStreetMap -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<style>
+    .nearby-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+        border-radius: var(--radius-lg);
+        color: white;
+        padding: 2.25rem 2rem;
+        margin-bottom: 1.75rem;
+    }
+
+    #vehicleMap {
+        height: 640px;
+        width: 100%;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        z-index: 1;
+    }
+
+    /* Custom Pulsing User Marker */
+    .user-marker-wrapper {
+        position: relative;
+    }
+    .user-marker-pulse {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(37, 99, 235, 0.25);
+        position: absolute;
+        top: -22px;
+        left: -22px;
+        animation: pulseAnimation 2s infinite ease-out;
+    }
+    .user-marker-core {
+        width: 26px;
+        height: 26px;
+        background: #2563eb;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        position: absolute;
+        top: -13px;
+        left: -13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 11px;
+    }
+
+    @@keyframes pulseAnimation {
+        0% { transform: scale(0.6); opacity: 1; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* Custom Vehicle Marker Pin */
+    .vehicle-marker-pin {
+        width: 38px;
+        height: 38px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        background: #1e293b;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .vehicle-marker-pin i {
+        transform: rotate(45deg);
+        color: #ffffff;
+        font-size: 16px;
+    }
+    .vehicle-marker-pin:hover {
+        background: #2563eb;
+        transform: rotate(-45deg) scale(1.15);
+    }
+
+    /* Category colors for pins */
+    .pin-electric { background: #059669; }
+    .pin-sports { background: #dc2626; }
+    .pin-luxury { background: #7c3aed; }
+    .pin-suv { background: #d97706; }
+    .pin-sedan { background: #2563eb; }
+
+    /* Map popup */
+    .leaflet-popup-content-wrapper {
+        border-radius: var(--radius-md) !important;
+        padding: 0 !important;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+    }
+    .leaflet-popup-content {
+        margin: 0 !important;
+        line-height: 1.4 !important;
+        font-family: inherit !important;
+    }
+    .popup-card {
+        width: 260px;
+    }
+    .popup-card img {
+        width: 100%;
+        height: 130px;
+        object-fit: cover;
+    }
+    .popup-body {
+        padding: 12px 14px;
+    }
+
+    /* Sidebar list */
+    .sidebar-scroll {
+        max-height: 580px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    .vehicle-list-card {
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+        border: 1px solid var(--card-border);
+    }
+    .vehicle-list-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+    }
+
+    .osm-badge {
+        font-size: 0.75rem;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+</style>
+
+<div class="container-fluid px-lg-4 py-3">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Home</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Vehicle" asp-action="Index" class="text-decoration-none">Fleet</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Nearby Vehicles</li>
+        </ol>
+    </nav>
+
+    <!-- Header Banner -->
+    <div class="nearby-header shadow-sm">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-primary px-3 py-1 rounded-pill">
+                        <i class="bi bi-geo-alt-fill me-1"></i> OpenStreetMap Live Geocoding
+                    </span>
+                    <span class="badge osm-badge rounded-pill bg-white text-dark">
+                        Leaflet &amp; Nominatim API
+                    </span>
+                </div>
+                <h2 class="fw-bold mb-1">Search Nearby Vehicles</h2>
+                <p class="mb-0 text-white-50">
+                    Find available rental cars in your immediate vicinity. Pan the map, search by address, or use your GPS location.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <button type="button" id="btnMyLocation" class="btn btn-light rounded-pill px-4 shadow-sm text-primary fw-semibold">
+                    <i class="bi bi-crosshair me-1"></i> Use My GPS Location
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls Card -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+        <div class="row g-3 align-items-center">
+            <!-- OpenStreetMap Nominatim Search Input -->
+            <div class="col-lg-5 col-md-12">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" id="osmSearchInput" class="form-control border-start-0 border-end-0 ps-0" 
+                           placeholder="Search address, landmark or city (e.g. San Francisco, New York)..." />
+                    <button class="btn btn-primary px-4" type="button" id="btnOsmSearch">
+                        Search
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Radius Selector -->
+            <div class="col-lg-3 col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted small">
+                        <i class="bi bi-bullseye me-1"></i> Radius
+                    </span>
+                    <select id="radiusSelect" class="form-select">
+                        <option value="5">Within 5 km</option>
+                        <option value="10">Within 10 km</option>
+                        <option value="25" selected>Within 25 km</option>
+                        <option value="50">Within 50 km</option>
+                        <option value="100">Within 100 km</option>
+                        <option value="0">Show All (Worldwide)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Vehicle Category Selector -->
+            <div class="col-lg-2 col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted small">
+                        <i class="bi bi-funnel me-1"></i> Type
+                    </span>
+                    <select id="categorySelect" class="form-select">
+                        <option value="All" selected>All Categories</option>
+                        <option value="Sedan">Sedan</option>
+                        <option value="SUV">SUV</option>
+                        <option value="Luxury">Luxury</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Electric">Electric</option>
+                        <option value="Van">Van</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Preset Cities Buttons -->
+            <div class="col-lg-2 col-md-12 text-lg-end">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle w-100 rounded-pill" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-compass me-1"></i> Presets
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li><h6 class="dropdown-header">Quick Location Test</h6></li>
+                        <li><a class="dropdown-item preset-location" href="#" data-lat="21.1702" data-lon="72.8311" data-name="Surat, Gujarat"><i class="bi bi-pin-map text-success me-2"></i> Surat (Fleet Base)</a></li>
+                        <li><a class="dropdown-item preset-location" href="#" data-lat="19.0760" data-lon="72.8777" data-name="Mumbai, India"><i class="bi bi-pin-map text-warning me-2"></i> Mumbai, India</a></li>
+                        <li><a class="dropdown-item preset-location" href="#" data-lat="28.6139" data-lon="77.2090" data-name="New Delhi, India"><i class="bi bi-pin-map text-info me-2"></i> New Delhi, India</a></li>
+                        <li><a class="dropdown-item preset-location" href="#" data-lat="37.7749" data-lon="-122.4194" data-name="San Francisco, CA"><i class="bi bi-pin-map text-primary me-2"></i> San Francisco, CA</a></li>
+                        <li><a class="dropdown-item preset-location" href="#" data-lat="40.7128" data-lon="-74.0060" data-name="New York, NY"><i class="bi bi-pin-map text-secondary me-2"></i> New York, NY</a></li>
+                        <li><a class="dropdown-item preset-location" href="#" data-lat="51.5074" data-lon="-0.1278" data-name="London, UK"><i class="bi bi-pin-map text-danger me-2"></i> London, UK</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Geocoded Status & Search Center Indicator -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-3 border-top small text-muted">
+            <div class="d-flex align-items-center gap-2">
+                <span class="spinner-grow spinner-grow-sm text-primary d-none" id="locationSpinner" role="status"></span>
+                <i class="bi bi-geo-alt-fill text-danger"></i>
+                <span>Search Center: <strong id="locationStatusText" class="text-dark">Detecting location...</strong></span>
+                <span class="badge bg-light text-secondary border" id="coordsBadge">0.00, 0.00</span>
+            </div>
+            <div class="mt-2 mt-sm-0">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill" id="foundCountBadge">
+                    Finding vehicles...
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Map & Vehicles Layout -->
+    <div class="row g-4">
+        <!-- OpenStreetMap Container (Left / Center) -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-2 bg-white position-relative">
+                <div id="vehicleMap"></div>
+
+                <!-- Interactive Map Helper Notice -->
+                <div class="position-absolute bottom-0 start-0 m-4 px-3 py-2 bg-white bg-opacity-95 shadow-sm rounded-pill border small d-none d-md-flex align-items-center gap-2" style="z-index: 500;">
+                    <i class="bi bi-cursor-fill text-primary"></i>
+                    <span><strong>Click anywhere on map</strong> to relocate search center pin.</span>
+                </div>
+            </div>
+
+            <!-- Map Legend -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 mt-3 bg-white">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 small">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fw-semibold text-dark"><i class="bi bi-info-circle me-1 text-primary"></i> Map Legend:</span>
+                        <span class="d-inline-flex align-items-center"><span class="rounded-circle me-1" style="width:12px; height:12px; background:#2563eb; display:inline-block;"></span> Your Search Center</span>
+                        <span class="d-inline-flex align-items-center"><span class="rounded-circle me-1" style="width:12px; height:12px; background:rgba(37,99,235,0.2); border:1px solid #2563eb; display:inline-block;"></span> Search Radius Circle</span>
+                        <span class="d-inline-flex align-items-center"><span class="rounded-circle me-1" style="width:12px; height:12px; background:#059669; display:inline-block;"></span> Available Vehicle</span>
+                    </div>
+                    <div>
+                        <a href="https://www.openstreetmap.org" target="_blank" class="text-muted text-decoration-none">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Powered by OpenStreetMap contributors
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nearby Vehicles List Sidebar (Right) -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <div>
+                        <h5 class="fw-bold mb-0">Nearby Fleet</h5>
+                        <small class="text-muted" id="sidebarSubtitle">Vehicles within selected radius</small>
+                    </div>
+                    <span class="badge bg-primary rounded-pill px-3 py-2" id="sidebarCountBadge">0 found</span>
+                </div>
+
+                <!-- Scrollable Vehicle Cards Container -->
+                <div class="sidebar-scroll flex-grow-1" id="vehiclesListContainer">
+                    <!-- Populated dynamically via vehicle-map.js -->
+                </div>
+
+                <!-- Empty State Container (Displayed when 0 vehicles found) -->
+                <div id="emptyStateContainer" class="d-none text-center py-5 px-3">
+                    <div class="bg-light rounded-circle p-4 d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                        <i class="bi bi-geo-alt text-muted fs-2"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">No Vehicles in this Area</h6>
+                    <p class="text-muted small mb-4">
+                        No available vehicles were found within the specified radius of your search center.
+                    </p>
+                    <div class="d-grid gap-2">
+                        <button type="button" id="btnSpawnDemo" class="btn btn-outline-primary rounded-pill btn-sm py-2">
+                            <i class="bi bi-magic me-1"></i> Place Demo Vehicles Here
+                        </button>
+                        <button type="button" id="btnExpandRadius" class="btn btn-primary rounded-pill btn-sm py-2">
+                            <i class="bi bi-arrows-fullscreen me-1"></i> Expand Radius to 100 km
+                        </button>
+                        <button type="button" id="btnShowSanFrancisco" class="btn btn-outline-secondary rounded-pill btn-sm py-2">
+                            <i class="bi bi-buildings me-1"></i> View Surat Fleet Base
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet JS for OpenStreetMap -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+    window.currentUserId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
+</script>
+
+<!-- OpenStreetMap Vehicle Search Script -->
+<script src="~/js/vehicle-map.js" asp-append-version="true"></script>

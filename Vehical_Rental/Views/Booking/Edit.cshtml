@@ -1,0 +1,115 @@
+@model Vehical_Rental.Models.Booking
+@inject Vehical_Rental.Services.Interfaces.IVehicleService VehicleService
+@inject Vehical_Rental.Services.Interfaces.IUserService UserService
+@{
+    ViewData["Title"] = $"Edit Reservation #{Model.Id}";
+    var vehicle = Model.Vehicle ?? await VehicleService.GetByIdAsync(Model.VehicleId);
+    var user = Model.User ?? await UserService.GetByIdAsync(Model.UserId);
+}
+
+<div class="row justify-content-center py-3">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                <div class="bg-warning text-dark rounded-circle p-3 me-3 d-inline-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    <i class="bi bi-pencil-square fs-3"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0">Modify Reservation #@Model.Id</h3>
+                    <small class="text-muted">Update dates, status, or special notes for this rental</small>
+                </div>
+            </div>
+
+            <!-- Booking Summary Box -->
+            <div class="card border rounded-3 p-3 bg-light mb-4">
+                <div class="row g-2 small">
+                    <div class="col-sm-6">
+                        <strong>Vehicle:</strong> @(vehicle?.FullName ?? $"Car #{Model.VehicleId}")
+                        <span class="text-muted">(₹@(vehicle?.DailyRate.ToString("F2") ?? "0.00")/day)</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <strong>Customer:</strong> @(user?.FullName ?? $"User #{Model.UserId}")
+                    </div>
+                </div>
+            </div>
+
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="UserId" />
+                <input type="hidden" asp-for="VehicleId" />
+                <input type="hidden" asp-for="BookingDate" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small shadow-sm rounded-3"></div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="StartDate" class="form-label">Pickup Date</label>
+                        <input asp-for="StartDate" type="date" id="editStartDate" class="form-control" 
+                               value="@Model.StartDate.ToString("yyyy-MM-dd")" required onchange="recalculatePrice()" />
+                        <span asp-validation-for="StartDate" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="EndDate" class="form-label">Return Date</label>
+                        <input asp-for="EndDate" type="date" id="editEndDate" class="form-control" 
+                               value="@Model.EndDate.ToString("yyyy-MM-dd")" required onchange="recalculatePrice()" />
+                        <span asp-validation-for="EndDate" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="Status" class="form-label">Booking Status</label>
+                        <select asp-for="Status" class="form-select" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="TotalPrice" class="form-label">Total Price (INR ₹)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input asp-for="TotalPrice" id="editTotalPrice" type="number" step="0.01" class="form-control" required />
+                        </div>
+                        <span asp-validation-for="TotalPrice" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Notes" class="form-label">Booking Notes</label>
+                    <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4 rounded-pill">Cancel</a>
+                    <button type="submit" class="btn btn-warning px-5 rounded-pill shadow-sm">
+                        <i class="bi bi-save me-1"></i> Update Reservation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        var dailyRate = @(vehicle?.DailyRate ?? 50);
+
+        function recalculatePrice() {
+            var startInput = document.getElementById("editStartDate").value;
+            var endInput = document.getElementById("editEndDate").value;
+
+            if (startInput && endInput) {
+                var start = new Date(startInput);
+                var end = new Date(endInput);
+                var diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
+                if (diffDays <= 0) diffDays = 1;
+                document.getElementById("editTotalPrice").value = (diffDays * dailyRate).toFixed(2);
+            }
+        }
+    </script>
+}

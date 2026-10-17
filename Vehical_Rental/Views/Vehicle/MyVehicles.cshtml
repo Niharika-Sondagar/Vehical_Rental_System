@@ -1,5 +1,167 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model IEnumerable<Vehical_Rental.Models.Vehicle>
 @{
+    ViewData["Title"] = "My Fleet Management";
+    var vehiclesList = Model.ToList();
+    var availableCount = vehiclesList.Count(v => v.IsAvailable);
+    var rentedCount = vehiclesList.Count(v => !v.IsAvailable);
+    var totalBookingsOnMyCars = vehiclesList.Sum(v => v.Bookings.Count);
+    var totalEarnings = vehiclesList.SelectMany(v => v.Bookings).Where(b => b.Status == "Confirmed" || b.Status == "Completed").Sum(b => b.TotalPrice);
 }
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-key-fill text-warning me-2"></i>My Vehicle Fleet</h2>
+        <p class="text-muted mb-0">Manage your rental inventory, adjust pricing, toggle vehicle availability, and track bookings.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Booking" asp-action="Requests" class="btn btn-warning rounded-pill px-4 text-dark shadow-sm">
+            <i class="bi bi-inbox-fill me-1"></i> Booking Requests
+        </a>
+        <a asp-action="Create" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Add New Vehicle
+        </a>
+    </div>
+</div>
+
+<!-- Fleet Performance Stat Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-primary border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Listed Vehicles</small>
+            <h2 class="display-6 fw-bold text-primary mt-1 mb-0">@vehiclesList.Count</h2>
+            <small class="text-muted">Total cars in your garage</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-success border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Available for Rent</small>
+            <h2 class="display-6 fw-bold text-success mt-1 mb-0">@availableCount</h2>
+            <small class="text-muted">Ready for booking immediately</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-warning border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Currently Rented</small>
+            <h2 class="display-6 fw-bold text-warning mt-1 mb-0">@rentedCount</h2>
+            <small class="text-muted">Vehicles on road</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-info border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Fleet Earnings</small>
+            <h2 class="display-6 fw-bold text-info mt-1 mb-0">₹@totalEarnings.ToString("N2")</h2>
+            <small class="text-muted">From @totalBookingsOnMyCars reservations</small>
+        </div>
+    </div>
+</div>
+
+<!-- Vehicles Table -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-bold mb-0">My Vehicle Inventory</h5>
+            <small class="text-muted">Only you can edit or remove your vehicles</small>
+        </div>
+        <a asp-action="Create" class="btn btn-sm btn-primary rounded-pill px-3">
+            <i class="bi bi-plus-lg me-1"></i> Add Vehicle
+        </a>
+    </div>
+
+    @if (vehiclesList.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Vehicle</th>
+                        <th>Category</th>
+                        <th>License Plate</th>
+                        <th>Daily Rate</th>
+                        <th>Rentals</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var car in vehiclesList)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <img src="@(string.IsNullOrEmpty(car.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=150&q=80" : car.ImageUrl)" 
+                                         alt="@car.FullName" 
+                                         class="rounded-3 me-3 object-fit-cover" 
+                                         style="width: 60px; height: 40px;" />
+                                    <div>
+                                        <div class="fw-bold">@car.FullName</div>
+                                        <div class="small text-muted">@car.Transmission &bull; @car.FuelType &bull; Year @car.Year</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">@car.Category</span></td>
+                            <td><code>@car.LicensePlate</code></td>
+                            <td class="fw-bold text-primary">₹@car.DailyRate.ToString("N2")</td>
+                            <td>
+                                <span class="badge bg-light text-secondary border">@car.Bookings.Count bookings</span>
+                            </td>
+                            <td>
+                                @if (car.IsAvailable)
+                                {
+                                    <span class="badge bg-success rounded-pill px-3 py-1">Available</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger rounded-pill px-3 py-1">Rented / Held</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="d-inline-flex gap-1">
+                                    <form asp-action="ToggleAvailability" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@car.Id" />
+                                        @if (car.IsAvailable)
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill" title="Toggle status to unavailable">
+                                                <i class="bi bi-pause-circle"></i> Pause
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill" title="Toggle status to available">
+                                                <i class="bi bi-play-circle"></i> Resume
+                                            </button>
+                                        }
+                                    </form>
+                                    <a asp-action="Details" asp-route-id="@car.Id" class="btn btn-sm btn-outline-secondary rounded-pill" title="View Public Listing">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@car.Id" class="btn btn-sm btn-outline-warning rounded-pill" title="Edit Vehicle">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </a>
+                                    <a asp-action="Delete" asp-route-id="@car.Id" class="btn btn-sm btn-outline-danger rounded-pill" title="Delete Vehicle">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="card-body p-5 text-center">
+            <div class="bg-light text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 72px; height: 72px;">
+                <i class="bi bi-car-front fs-1"></i>
+            </div>
+            <h4 class="fw-bold">No Vehicles Listed Yet</h4>
+            <p class="text-muted" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                You haven't listed any vehicles in your fleet yet. Start earning rental income by adding your first vehicle today!
+            </p>
+            <a asp-action="Create" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Add Your First Vehicle
+            </a>
+        </div>
+    }
+</div>

@@ -1,17 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Vehical_Rental.Models;
 
 namespace Vehical_Rental.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
 
-        public DbSet<User> Users => Set<User>();
         public DbSet<Vehicle> Vehicles => Set<Vehicle>();
         public DbSet<Booking> Bookings => Set<Booking>();
         public DbSet<Payment> Payments => Set<Payment>();
@@ -21,19 +20,17 @@ namespace Vehical_Rental.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // User configuration
-            modelBuilder.Entity<User>(entity =>
-            {
-                entity.HasKey(u => u.Id);
-                entity.HasIndex(u => u.Email).IsUnique();
-            });
-
             // Vehicle configuration
             modelBuilder.Entity<Vehicle>(entity =>
             {
                 entity.HasKey(v => v.Id);
                 entity.HasIndex(v => v.LicensePlate).IsUnique();
                 entity.Property(v => v.DailyRate).HasPrecision(18, 2);
+
+                entity.HasOne(v => v.Owner)
+                      .WithMany(u => u.OwnedVehicles)
+                      .HasForeignKey(v => v.OwnerId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Booking configuration

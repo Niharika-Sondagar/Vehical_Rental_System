@@ -1,0 +1,215 @@
+@model IEnumerable<Vehical_Rental.Models.Booking>
+@{
+    ViewData["Title"] = "Fleet Booking Requests";
+    var statusFilter = Context.Request.Query["status"].ToString();
+    var requests = string.IsNullOrEmpty(statusFilter)
+        ? Model
+        : Model.Where(b => b.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase));
+    var requestsList = requests.ToList();
+    var pendingCount = Model.Count(b => b.Status == "Pending");
+    var acceptedCount = Model.Count(b => b.Status == "Accepted");
+    var confirmedCount = Model.Count(b => b.Status == "Confirmed");
+    var rejectedCount = Model.Count(b => b.Status == "Rejected");
+}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-inbox-fill text-primary me-2"></i>Booking Requests for My Fleet</h2>
+        <p class="text-muted mb-0">Review customer reservation requests, approve or reject bookings, and monitor payments.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-controller="Booking" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-calendar-check me-1"></i> My Rentals (As Customer)
+        </a>
+        <a asp-controller="Vehicle" asp-action="MyVehicles" class="btn btn-outline-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-car-front me-1"></i> My Fleet
+        </a>
+        <a asp-controller="Vehicle" asp-action="Create" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-plus-circle me-1"></i> Add Vehicle
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stat Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-warning border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Pending Approval</small>
+            <h2 class="display-6 fw-bold text-warning mt-1 mb-0">@pendingCount</h2>
+            <small class="text-muted">Awaiting your response</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-info border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Accepted (Unpaid)</small>
+            <h2 class="display-6 fw-bold text-info mt-1 mb-0">@acceptedCount</h2>
+            <small class="text-muted">Customer to complete payment</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-success border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Confirmed & Paid</small>
+            <h2 class="display-6 fw-bold text-success mt-1 mb-0">@confirmedCount</h2>
+            <small class="text-muted">Rental secured</small>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border-start border-secondary border-4 h-100">
+            <small class="text-muted text-uppercase fw-semibold">Rejected</small>
+            <h2 class="display-6 fw-bold text-secondary mt-1 mb-0">@rejectedCount</h2>
+            <small class="text-muted">Declined requests</small>
+        </div>
+    </div>
+</div>
+
+<!-- Status Filter Toolbar -->
+<div class="filter-bar mb-4">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted small fw-semibold me-2"><i class="bi bi-funnel me-1"></i> Filter by Status:</span>
+        <a asp-action="Requests" class="btn btn-sm rounded-pill px-3 @(string.IsNullOrEmpty(statusFilter) ? "btn-primary" : "btn-outline-secondary")">
+            All (@Model.Count())
+        </a>
+        <a asp-action="Requests" asp-route-status="Pending" class="btn btn-sm rounded-pill px-3 @(statusFilter.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "btn-warning text-dark" : "btn-outline-secondary")">
+            Pending (@pendingCount)
+        </a>
+        <a asp-action="Requests" asp-route-status="Accepted" class="btn btn-sm rounded-pill px-3 @(statusFilter.Equals("Accepted", StringComparison.OrdinalIgnoreCase) ? "btn-info text-white" : "btn-outline-secondary")">
+            Accepted (@acceptedCount)
+        </a>
+        <a asp-action="Requests" asp-route-status="Confirmed" class="btn btn-sm rounded-pill px-3 @(statusFilter.Equals("Confirmed", StringComparison.OrdinalIgnoreCase) ? "btn-success" : "btn-outline-secondary")">
+            Confirmed (@confirmedCount)
+        </a>
+        <a asp-action="Requests" asp-route-status="Rejected" class="btn btn-sm rounded-pill px-3 @(statusFilter.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ? "btn-danger" : "btn-outline-secondary")">
+            Rejected (@rejectedCount)
+        </a>
+    </div>
+</div>
+
+@if (requestsList.Any())
+{
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Request #</th>
+                        <th>Vehicle</th>
+                        <th>Customer / Contact</th>
+                        <th>Rental Dates</th>
+                        <th>Amount (INR)</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Owner Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in requestsList.OrderByDescending(b => b.BookingDate))
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold">#BK-@item.Id</span>
+                                <div class="text-muted small">@item.BookingDate.ToString("MMM dd, yyyy")</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">@item.BookingDate.ToString("hh:mm tt")</div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="@(string.IsNullOrEmpty(item.Vehicle?.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=150&q=80" : item.Vehicle.ImageUrl)" 
+                                         alt="@item.Vehicle?.FullName" 
+                                         class="rounded-3 me-2 object-fit-cover" 
+                                         style="width: 55px; height: 38px;" />
+                                    <div>
+                                        <div class="fw-semibold">@(item.Vehicle?.FullName ?? $"Vehicle #{item.VehicleId}")</div>
+                                        <div class="small text-muted">Plate: <code>@(item.Vehicle?.LicensePlate ?? "N/A")</code></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark"><i class="bi bi-person me-1 text-primary"></i>@(item.User?.FullName ?? "Customer")</div>
+                                <div class="small text-muted"><i class="bi bi-envelope me-1"></i>@(item.User?.Email ?? "No email")</div>
+                                <div class="small text-muted">
+                                    <i class="bi bi-telephone me-1"></i>
+                                    @(string.IsNullOrEmpty(item.User?.PhoneNumber) ? "No phone" : (item.User.PhoneNumber.StartsWith("+91") ? item.User.PhoneNumber : "+91 " + item.User.PhoneNumber))
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <span class="text-dark fw-semibold">@item.StartDate.ToString("MMM dd")</span> to 
+                                    <span class="text-dark fw-semibold">@item.EndDate.ToString("MMM dd, yyyy")</span>
+                                </div>
+                                <span class="badge bg-light text-secondary border">@item.TotalDays @(item.TotalDays == 1 ? "day" : "days")</span>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-primary fs-6">₹@item.TotalPrice.ToString("N2")</span>
+                                <div class="text-muted" style="font-size: 0.75rem;">(₹@(item.Vehicle?.DailyRate.ToString("N0") ?? "0")/day)</div>
+                            </td>
+                            <td>
+                                @if (item.Status == "Pending")
+                                {
+                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1">
+                                        <i class="bi bi-hourglass-split me-1"></i> Pending Review
+                                    </span>
+                                }
+                                else if (item.Status == "Accepted")
+                                {
+                                    <span class="badge bg-info text-white rounded-pill px-3 py-1">
+                                        <i class="bi bi-check-circle me-1"></i> Accepted (Unpaid)
+                                    </span>
+                                }
+                                else if (item.Status == "Confirmed")
+                                {
+                                    <span class="badge bg-success rounded-pill px-3 py-1">
+                                        <i class="bi bi-shield-check me-1"></i> Confirmed & Paid
+                                    </span>
+                                }
+                                else if (item.Status == "Rejected")
+                                {
+                                    <span class="badge bg-danger rounded-pill px-3 py-1">
+                                        <i class="bi bi-x-circle me-1"></i> Rejected
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary rounded-pill px-3 py-1">@item.Status</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="d-inline-flex gap-1 align-items-center">
+                                    @if (item.Status == "Pending")
+                                    {
+                                        <form asp-action="Accept" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm" title="Accept Booking Request">
+                                                <i class="bi bi-check-lg me-1"></i> Accept
+                                            </button>
+                                        </form>
+                                        <form asp-action="Reject" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Reject Booking Request" onclick="return confirm('Are you sure you want to reject this booking request?');">
+                                                <i class="bi bi-x-lg me-1"></i> Reject
+                                            </button>
+                                        </form>
+                                    }
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary rounded-pill" title="View Full Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card border-0 bg-white rounded-4 p-5 text-center shadow-sm">
+        <div class="text-muted mb-3"><i class="bi bi-inbox fs-1"></i></div>
+        <h4 class="fw-bold">No Booking Requests Found</h4>
+        <p class="text-muted">There are no reservation requests matching your selected filter.</p>
+        <div class="d-flex justify-content-center gap-2">
+            <a asp-action="Requests" class="btn btn-outline-secondary rounded-pill px-4">Show All Requests</a>
+            <a asp-controller="Vehicle" asp-action="MyVehicles" class="btn btn-primary rounded-pill px-4">Manage My Fleet</a>
+        </div>
+    </div>
+}

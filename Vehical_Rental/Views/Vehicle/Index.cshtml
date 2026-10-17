@@ -1,5 +1,190 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model IEnumerable<Vehical_Rental.Models.Vehicle>
 @{
+    ViewData["Title"] = "Our Rental Fleet";
+    var selectedCategory = Context.Request.Query["category"].ToString();
+    var vehicles = string.IsNullOrEmpty(selectedCategory) 
+        ? Model 
+        : Model.Where(v => v.Category.Equals(selectedCategory, StringComparison.OrdinalIgnoreCase));
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Explore Our Rental Fleet</h2>
+        <p class="text-muted mb-0">Select from our well-maintained vehicles listed by verified vehicle owners.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Nearby" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-geo-alt-fill me-1"></i> Find Nearby Vehicles (Map)
+        </a>
+        @if (User.IsInRole("VehicleOwner"))
+        {
+            <a asp-action="MyVehicles" class="btn btn-outline-primary rounded-pill px-3 shadow-sm">
+                <i class="bi bi-car-front me-1"></i> My Fleet
+            </a>
+            <a asp-action="Create" class="btn btn-success rounded-pill px-4 shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Add Vehicle
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Filters and Search Toolbar -->
+<div class="filter-bar mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-lg-7 d-flex flex-wrap gap-2">
+            <a asp-action="Index" class="btn btn-sm rounded-pill px-3 @(string.IsNullOrEmpty(selectedCategory) ? "btn-primary" : "btn-outline-secondary")">
+                All (@Model.Count())
+            </a>
+            @foreach (var cat in new[] { "Sedan", "SUV", "Luxury", "Sports", "Electric", "Van" })
+            {
+                var count = Model.Count(v => v.Category.Equals(cat, StringComparison.OrdinalIgnoreCase));
+                <a asp-action="Index" asp-route-category="@cat" class="btn btn-sm rounded-pill px-3 @(selectedCategory.Equals(cat, StringComparison.OrdinalIgnoreCase) ? "btn-primary" : "btn-outline-secondary")">
+                    @cat (@count)
+                </a>
+            }
+        </div>
+        <div class="col-lg-5">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" id="vehicleSearchInput" class="form-control border-start-0" placeholder="Search by make, model, or year..." onkeyup="filterVehicles()" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (vehicles.Any())
+{
+    <div class="row g-4" id="vehicleCardsContainer">
+        @foreach (var car in vehicles)
+        {
+            <div class="col-lg-4 col-md-6 vehicle-card-item" data-title="@car.FullName.ToLower()" data-category="@car.Category.ToLower()">
+                <div class="card card-custom h-100">
+                    <div class="vehicle-img-wrapper">
+                        <img src="@(string.IsNullOrEmpty(car.ImageUrl) ? "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=600&q=80" : car.ImageUrl)" 
+                             alt="@car.FullName" 
+                             class="vehicle-img" />
+                        <span class="vehicle-badge-category">@car.Category</span>
+                        @if (car.IsAvailable)
+                        {
+                            <span class="vehicle-badge-status bg-success text-white">
+                                <i class="bi bi-check-circle-fill me-1"></i> Available
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="vehicle-badge-status bg-danger text-white">
+                                <i class="bi bi-x-circle-fill me-1"></i> Booked
+                            </span>
+                        }
+                    </div>
+
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="fw-bold mb-0">@car.Make @car.Model</h5>
+                                <small class="text-muted">Model Year: @car.Year &bull; Plate: @car.LicensePlate</small>
+                                <div class="mt-1">
+                                    <span class="badge bg-light text-dark border small" style="font-size: 0.75rem;">
+                                        <i class="bi bi-person-fill text-primary me-1"></i>Owner: @(car.Owner?.FullName ?? "Verified Owner")
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-primary fw-bold fs-5">₹@car.DailyRate.ToString("N0")</div>
+                                <small class="text-muted">/ day</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="star-rating me-2">
+                                <i class="bi bi-star-fill"></i>
+                            </span>
+                            <span class="small fw-bold">@car.AverageRating.ToString("F1")</span>
+                            <span class="text-muted small ms-1">(@car.Reviews.Count reviews)</span>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="spec-pill"><i class="bi bi-gear-wide text-secondary"></i> @car.Transmission</span>
+                            <span class="spec-pill"><i class="bi bi-fuel-pump text-secondary"></i> @car.FuelType</span>
+                            <span class="spec-pill"><i class="bi bi-people text-secondary"></i> @car.Seats Seats</span>
+                        </div>
+
+                        <p class="text-muted small flex-grow-1 mb-3">
+                            @(string.IsNullOrEmpty(car.Description) ? "Excellent condition, smoothly maintained, and fully prepared for any trip." : (car.Description.Length > 90 ? car.Description.Substring(0, 90) + "..." : car.Description))
+                        </p>
+
+                        <div class="d-flex gap-2 pt-2 border-top">
+                            <a asp-action="Details" asp-route-id="@car.Id" class="btn btn-outline-secondary btn-sm flex-fill rounded-pill">
+                                <i class="bi bi-info-circle me-1"></i> Details
+                            </a>
+                            @if (!string.IsNullOrEmpty(currentUserId) && car.OwnerId == currentUserId)
+                            {
+                                <span class="badge bg-light text-primary border py-2 px-3 rounded-pill flex-fill text-center d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-person-badge me-1"></i> Your Vehicle
+                                </span>
+                            }
+                            else
+                            {
+                                @if (car.IsAvailable)
+                                {
+                                    <a asp-controller="Booking" asp-action="Create" asp-route-vehicleId="@car.Id" class="btn btn-primary btn-sm flex-fill rounded-pill">
+                                        <i class="bi bi-calendar-check me-1"></i> Rent Now
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-secondary btn-sm flex-fill rounded-pill" disabled>Unavailable</button>
+                                }
+                            }
+                        </div>
+
+                        @if (User.IsInRole("VehicleOwner") && car.OwnerId == currentUserId)
+                        {
+                            <div class="d-flex justify-content-end gap-2 mt-2 pt-2 border-top border-light">
+                                <a asp-action="Edit" asp-route-id="@car.Id" class="btn btn-outline-warning btn-sm py-1 px-2 rounded-pill">
+                                    <i class="bi bi-pencil-square"></i> Edit My Car
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@car.Id" class="btn btn-outline-danger btn-sm py-1 px-2 rounded-pill">
+                                    <i class="bi bi-trash"></i> Delete
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card border-0 bg-white rounded-4 p-5 text-center shadow-sm">
+        <div class="text-muted mb-3"><i class="bi bi-car-front fs-1"></i></div>
+        <h4 class="fw-bold">No Vehicles Found</h4>
+        <p class="text-muted">There are no vehicles available matching this category.</p>
+        <div class="d-flex justify-content-center gap-2">
+            <a asp-action="Index" class="btn btn-outline-primary rounded-pill px-4">Show All Vehicles</a>
+            @if (User.IsInRole("VehicleOwner"))
+            {
+                <a asp-action="Create" class="btn btn-primary rounded-pill px-4">Add Vehicle</a>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function filterVehicles() {
+            var search = document.getElementById("vehicleSearchInput").value.toLowerCase();
+            var items = document.querySelectorAll(".vehicle-card-item");
+            items.forEach(function (item) {
+                var title = item.getAttribute("data-title") || "";
+                if (title.indexOf(search) > -1) {
+                    item.style.display = "";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        }
+    </script>
 }

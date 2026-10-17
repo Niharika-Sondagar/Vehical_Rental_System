@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Vehical_Rental.Models
 {
@@ -11,8 +11,8 @@ namespace Vehical_Rental.Models
         public virtual Vehicle? Vehicle { get; set; }
 
         [Required]
-        public int UserId { get; set; }
-        public virtual User? User { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public virtual ApplicationUser? User { get; set; }
 
         [Required]
         [Range(1, 5)]

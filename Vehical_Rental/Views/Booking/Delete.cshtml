@@ -1,0 +1,49 @@
+@model Vehical_Rental.Models.Booking
+@{
+    ViewData["Title"] = $"Cancel Reservation #{Model.Id}";
+}
+
+<div class="row justify-content-center py-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white text-center">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                <i class="bi bi-calendar-x fs-1"></i>
+            </div>
+            <h3 class="fw-bold text-danger mb-2">Cancel Reservation</h3>
+            <p class="text-muted small mb-4">
+                Are you sure you want to cancel and delete this vehicle reservation? This action cannot be reversed.
+            </p>
+
+            <div class="card border rounded-3 p-3 bg-light text-start mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold">Reservation #@Model.Id</span>
+                    <span class="badge bg-secondary">@Model.Status</span>
+                </div>
+                <hr class="my-2">
+                <div class="small text-muted mb-1">
+                    <strong>Vehicle:</strong> @(Model.Vehicle?.FullName ?? $"Car #{Model.VehicleId}")
+                </div>
+                <div class="small text-muted mb-1">
+                    <strong>Renter:</strong> @(Model.User?.FullName ?? $"User #{Model.UserId}")
+                </div>
+                <div class="small text-muted mb-1">
+                    <strong>Dates:</strong> @Model.StartDate.ToString("MMM dd, yyyy") to @Model.EndDate.ToString("MMM dd, yyyy") (@Model.TotalDays days)
+                </div>
+                <div class="small text-muted">
+                    <strong>Total Amount:</strong> <span class="fw-bold text-dark">₹@Model.TotalPrice.ToString("N2")</span>
+                </div>
+            </div>
+
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <div class="d-flex justify-content-center gap-3">
+                    <a asp-action="Index" class="btn btn-outline-secondary rounded-pill px-4">Keep Booking</a>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-trash me-1"></i> Yes, Cancel Reservation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

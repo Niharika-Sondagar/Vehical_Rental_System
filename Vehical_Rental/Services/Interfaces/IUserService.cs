@@ -1,21 +1,27 @@
-﻿using Vehical_Rental.Models;
+using Vehical_Rental.Models;
 
 namespace Vehical_Rental.Services.Interfaces
 {
     public interface IUserService
     {
-        Task<IEnumerable<User>> GetAllAsync();
+        Task<IEnumerable<ApplicationUser>> GetAllAsync();
 
-        Task<User?> GetByIdAsync(int id);
+        Task<ApplicationUser?> GetByIdAsync(string id);
 
-        Task<User?> GetByEmailAsync(string email);
+        Task<ApplicationUser?> GetByEmailAsync(string email);
 
-        Task<(bool Success, string Message)> RegisterAsync(User user);
+        Task<(bool Success, string Message)> RegisterAsync(ApplicationUser user, string password, string role = "Customer");
 
-        Task<User?> LoginAsync(string email, string password);
+        Task<ApplicationUser?> LoginAsync(string email, string password);
 
-        Task UpdateAsync(User user);
+        Task<(bool Success, string Message)> UpdateAsync(ApplicationUser user, string? newRole = null);
 
-        Task DeleteAsync(int id);
+        Task<(bool Success, string Message)> DeleteAsync(string id, string? currentUserId = null);
+
+        Task<string> GetUserRoleAsync(ApplicationUser user);
+
+        Task<bool> IsLockedOutAsync(ApplicationUser user);
+
+        Task<(bool Success, string Message)> ToggleLockoutAsync(string id);
     }
 }
