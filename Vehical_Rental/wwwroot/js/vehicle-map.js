@@ -351,7 +351,7 @@
                                         <i class="bi bi-person-badge me-1"></i> Your Vehicle
                                        </a>`
                                     : `<a href="/Booking/Create?vehicleId=${vehicle.id}" class="btn btn-primary btn-sm rounded-pill py-1">
-                                        <i class="bi bi-calendar-check me-1"></i> Rent Now (₹)
+                                    <i class="bi bi-calendar-check me-1"></i> Rent Now (₹)
                                        </a>`
                                 }
                                 <a href="/Vehicle/Details/${vehicle.id}" class="btn btn-outline-secondary btn-sm rounded-pill py-1">
@@ -374,8 +374,8 @@
             card.innerHTML = `
                 <div class="d-flex gap-3">
                     <img src="${vehicle.imageUrl}" alt="${vehicle.fullName}" 
-                          class="rounded-3 object-fit-cover shadow-sm" 
-                          style="width: 86px; height: 86px; min-width: 86px;" />
+                         class="rounded-3 object-fit-cover shadow-sm" 
+                         style="width: 86px; height: 86px; min-width: 86px;" />
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex justify-content-between align-items-start mb-1">
                             <span class="badge bg-light text-dark border small">${vehicle.category}</span>
