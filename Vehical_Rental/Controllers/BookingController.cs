@@ -138,21 +138,6 @@ namespace Vehical_Rental.Controllers
                 }
             }
 
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            // Authorization check: Customer can only view their own; Owner can only view bookings on their vehicles; Admin sees all
-            if (!User.IsInRole("Admin"))
-            {
-                bool isRenter = booking.UserId == currentUserId;
-                bool isVehicleOwner = booking.Vehicle?.OwnerId == currentUserId;
-
-                if (!isRenter && !isVehicleOwner)
-                {
-                    TempData["Error"] = "Access Denied: You do not have permission to view this reservation.";
-                    return Forbid();
-                }
-            }
-
             return View(booking);
         }
 
